@@ -9,7 +9,7 @@ import Data.Options ((:=))
 import Effect (Effect)
 -- import Effect.Class (liftEffect)
 import Effect.Console (log)
-import Node.ReadLine (Interface, close, createConsoleInterface, noCompletion, question, createInterface, output, setPrompt, terminal)
+import Node.ReadLine (Interface, close, completer, prompt, createConsoleInterface, noCompletion, question, createInterface, output, setPrompt, terminal)
 import Node.Process (stdin, stdout, onSignal)
 import Node.Stream (onData, onDataString, end, cork)
 import Node.Buffer (Buffer, toString)
@@ -22,7 +22,23 @@ import Node.Encoding  (Encoding(..))
 
 main :: Effect Unit
 main = do
-  log "START"
+
+  -- keypressっぽいタイミングで入力キーをhexで出力
+  intfc <- createInterface stdin $ terminal := true
+  onData stdin (\s -> do
+          str <- toString Hex s
+          log $ show $ str == "1b5b42"
+          log str
+          )
+  log "BBB"
+
+
+
+
+
+
+
+
 
   -- READ STREAM
   -- onData stdin (\s -> do
@@ -35,15 +51,16 @@ main = do
   --         end stdout (log "AAA")
   --         )
 
-  log "END"
-
   -- READ LINE
   -- rl <- createInterface stdin $ output := stdout
   -- question "????" (\s -> do
   --   log s
   --   close rl) rl
-
-
+  -- read line prompt
+  -- prompt $ createConsoleInterface completer
+  -- setPrompt "hoge" 3 intfc
+  -- setPrompt "fuga" 2 intfc
+  -- prmpt <-  prompt intfc
 -- stdin
 -- onData
 -- onDataString
