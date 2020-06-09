@@ -1,0 +1,3 @@
+exports.consoleClear
+  = console.clear;
+
