@@ -3,14 +3,16 @@ module Main where
 import Prelude
 
 import Effect (Effect)
-import Effect.Console (log)
-import Node.Stream (Readable, Writable)
+import Effect.Console (log, clear)
+import Node.Stream (Readable, Writable, write)
 import Effect.Promise (Promise)
 import Node.Process (stdin, stdout)
 import Data.Function.Uncurried (Fn4, runFn4)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
 import Data.Maybe (Maybe(..))
+import Node.Encoding(Encoding(..))
+import Node.Buffer(fromString, create)
 
 foreign import consoleClear :: Effect Unit
 
@@ -26,9 +28,12 @@ main = do
   -- consoleClear
   log "🍝"
   log "🍝"
-  onKeypress stdin stdout true $ \x -> log $ show x
+  onKeypress stdin stdout true $ \x -> do
+                                   clear
+                                   log $ show x
 
 
+-- process.stdout.write('\033c') // clear console
 
 
 type PressedKey = String
