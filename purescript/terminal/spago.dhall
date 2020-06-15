@@ -7,6 +7,7 @@ You can edit this file as you like.
   [ "console"
   , "effect"
   , "generics-rep"
+  , "lists"
   , "node-process"
   , "node-streams"
   , "promises"

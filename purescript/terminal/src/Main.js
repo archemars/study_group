@@ -21,3 +21,5 @@ exports.onResizeImpl = function (f) {
   }
 }
 
+exports.getColumns = process.stdout.columns
+exports.getRows = process.stdout.rows
