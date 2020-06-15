@@ -6,20 +6,29 @@ import Effect (Effect)
 import Effect.Console (log, clear)
 import Node.Stream (Readable, Writable)
 import Node.Process (stdin, stdout)
-import Data.Function.Uncurried (Fn4, runFn4)
+import Data.Function.Uncurried (Fn1, runFn1, Fn4, runFn4)
 import Data.Generic.Rep (class Generic)
-
-foreign import consoleClear :: Effect Unit
 
 -- ref: https://github.com/purescript-node/purescript-node-streams/blob/v4.0.1/src/Node/Stream.purs
 foreign import onKeypressImpl :: Fn4 (Readable ()) (Writable ()) (Boolean) (PressedKeyInfo -> Effect Unit) (Effect Unit)
 onKeypress :: Readable () -> Writable () -> Boolean -> (PressedKeyInfo -> Effect Unit) -> Effect Unit
 onKeypress = runFn4 onKeypressImpl
 
+foreign import onResizeImpl :: Fn1 (Int -> Int -> Effect Unit) (Effect Unit)
+onResize :: (Int -> Int -> Effect Unit) -> Effect Unit
+onResize = runFn1 onResizeImpl
+
 main :: Effect Unit
 main = do
+  onResize showSize
   onKeypress stdin stdout true getKeyName
 
+showSize :: Int -> Int -> Effect Unit
+showSize col row = do
+  log "col"
+  log $ show col
+  log "row"
+  log $ show row
 
 newtype PressedKeyInfo = PressedKeyInfo {
   sequence :: String
