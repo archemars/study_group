@@ -14,6 +14,9 @@ import Node.FS.Sync(readTextFile)
 import Data.Maybe (Maybe(Just, Nothing))
 import Node.Encoding(Encoding(UTF8))
 import Data.Either (Either(..), either)
+import Data.String.Common (split)
+import Data.String.Pattern (Pattern(..))
+
 
 foreign import getColumns :: Int
 foreign import getRows :: Int
@@ -48,11 +51,19 @@ main = do
                    _ -> Nothing
 
   txt <- readTextFile UTF8 "hoge.txt"
-  log txt
+  let p = Pattern "\n"
+  let startRow = 0
+  log $ displayTxt startRow row $ split p txt
+  -- [{row: 1, txt: "あいうえお"}, {row: 2, txt: "かきくけこ"}] 的な配列にする必要があるかも
+  -- filter (\x -> startRow < x.row && x.row < (startRow + row)) txts 的な
+  -- 最後にjoinしましょ
 
 
 getFileName :: Array String -> Maybe String
 getFileName args = head $ reverse args
+
+displayTxt :: Int -> Int -> Array String
+displayTxt startRow row strs = for (replicate row "a") \x -> log x
 
 
 type RowRange = {
