@@ -10,7 +10,7 @@ import Data.Function.Uncurried (Fn1, runFn1, Fn4, runFn4)
 import Data.Generic.Rep (class Generic)
 import Data.Array (replicate, length, head, reverse)
 import Data.Traversable (for)
-import Node.FS.Async(readTextFile)
+import Node.FS.Sync(readTextFile)
 import Data.Maybe (Maybe(Just, Nothing))
 import Node.Encoding(Encoding(UTF8))
 import Data.Either (Either(..), either)
@@ -47,11 +47,8 @@ main = do
                    3 -> getFileName args
                    _ -> Nothing
 
-  case fileName of
-    Just x -> readTextFile UTF8 x $ \x -> do
-                                      log "\n\nreadTextFile result:"
-                                      either (log <<< show) log x
-    Nothing -> log "errrrrr"
+  txt <- readTextFile UTF8 "hoge.txt"
+  log txt
 
 
 getFileName :: Array String -> Maybe String
