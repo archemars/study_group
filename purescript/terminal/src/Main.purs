@@ -5,11 +5,15 @@ import Prelude
 import Effect (Effect)
 import Effect.Console (log, clear)
 import Node.Stream (Readable, Writable)
-import Node.Process (stdin, stdout)
+import Node.Process (stdin, stdout, argv)
 import Data.Function.Uncurried (Fn1, runFn1, Fn4, runFn4)
 import Data.Generic.Rep (class Generic)
-import Data.Array (replicate)
+import Data.Array (replicate, length, head, reverse)
 import Data.Traversable (for)
+import Node.FS.Async(readTextFile)
+import Data.Maybe (Maybe(Just, Nothing))
+import Node.Encoding(Encoding(UTF8))
+import Data.Either (Either(..), either)
 
 foreign import getColumns :: Int
 foreign import getRows :: Int
@@ -35,6 +39,23 @@ main = do
 
   onResize showSize
   onKeypress stdin stdout true getKeyName
+
+  args <- argv
+  log $ show args
+
+  let fileName = case length args of
+                   3 -> getFileName args
+                   _ -> Nothing
+
+  case fileName of
+    Just x -> readTextFile UTF8 x $ \x -> do
+                                      log "\n\nreadTextFile result:"
+                                      either (log <<< show) log x
+    Nothing -> log "errrrrr"
+
+
+getFileName :: Array String -> Maybe String
+getFileName args = head $ reverse args
 
 
 type RowRange = {

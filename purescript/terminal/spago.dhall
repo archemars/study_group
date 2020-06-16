@@ -8,6 +8,7 @@ You can edit this file as you like.
   , "effect"
   , "generics-rep"
   , "lists"
+  , "node-fs"
   , "node-process"
   , "node-streams"
   , "promises"
