@@ -1,6 +1,3 @@
-exports.consoleClear
-  = console.clear;
-
 exports.onKeypressImpl = function (input, output, terminal, f) {
   const readline = require("readline");
   const rl = readline.createInterface({
@@ -16,5 +13,13 @@ exports.onKeypressImpl = function (input, output, terminal, f) {
   }
 }
 
+exports.onResizeImpl = function (f) {
+  return function () {
+    process.stdout.on('resize', function() {
+      f(process.stdout.columns)(process.stdout.rows)()
+    })
+  }
+}
 
-
+exports.getColumns = process.stdout.columns
+exports.getRows = process.stdout.rows
