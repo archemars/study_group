@@ -3,7 +3,7 @@ module Main where
 import Prelude
 
 import Effect (Effect)
-import Effect.Console (log, clear)
+import Effect.Console (log, clear,  logShow)
 import Node.Stream (Readable, Writable)
 import Node.Process (stdin, stdout, argv)
 import Data.Function.Uncurried (Fn1, runFn1, Fn4, runFn4)
@@ -22,6 +22,8 @@ import Control.Monad.Writer (writer)
 import Data.Tuple (Tuple)
 import Control.Monad.State
 import Control.Monad.State.Class
+import Effect.Ref as R
+
 
 
 foreign import getColumns :: Int
@@ -63,7 +65,10 @@ main = do
   -- showTxtRecord displayTxtiiii
   -- log "i"
 
-  onKeypress stdin stdout true (displayTxt screenRow txtRecord)
+  -- let srs = runState manip2 0
+  -- let srs = startRowState
+  srs <- R.new 0
+  onKeypress stdin stdout true (displayTxt screenRow txtRecord srs)
 
   -- log $ show txtRecord
   -- [{row: 1, txt: "あいうえお"}, {row: 2, txt: "かきくけこ"}] 的な配列にする必要があるかも
@@ -86,8 +91,8 @@ createTextRecord txt =  foldl (\x -> \y -> snoc x {row: (length x + 1), char: y}
 getFileName :: Array String -> Maybe String
 getFileName args = head $ reverse args
 
-displayTxt :: Int -> Array TxtRecord -> PressedKeyInfo -> Effect Unit
-displayTxt screenRow txtReords (PressedKeyInfo pki) = do
+displayTxt :: Int -> Array TxtRecord -> (R.Ref Int) -> PressedKeyInfo -> Effect Unit
+displayTxt screenRow txtReords srs (PressedKeyInfo pki) = do
   let startRow = 0
   clear
   let name = case pki.name of
@@ -103,7 +108,68 @@ displayTxt screenRow txtReords (PressedKeyInfo pki) = do
        "right" -> screenRow
        _   -> screenRow
   let displayTxt = filter (\x -> newStartRow < x.row && x.row < (newStartRow + screenRow)) txtReords
-  showTxtRecord displayTxt
+  -- showTxtRecord displayTxt
+  R.modify_ (\s -> s + 1) srs
+  i <- R.read srs
+  logShow i
+  -- modify_ (_ + 1)
+  -- logShow $ runState srs 0
+  -- logShow $ runState (manimani name) 0
+
+
+  -- plusState 1
+  -- _ <- minusState
+
+  -- logShow $ runState manip2 0
+
+-- main :: Effect Unit
+-- main = do
+--   -- logShow $ runState manip (3 : 2 : 1 : Nil)
+--   logShow $ runState manip2 0
+
+startRowState :: Tuple Unit Int
+startRowState = runState (pure unit) 0
+
+plusState :: Int -> State Int Unit
+plusState x = modify_ (\s -> s + x)
+
+minusState :: State Int Int
+minusState = do
+  xs <- get
+  modify_ (\x -> xs - 1)
+  pure xs
+
+pp :: State Int Int
+pp = do
+    xs <- get
+    plusState 1
+    pure xs
+
+ppp :: State Int Unit
+ppp = do
+    xs <- get
+    plusState 1
+    pure unit
+
+manip2 :: State Int Unit
+manip2 = do
+    plusState 1
+    plusState 10
+    plusState 4
+    _ <- minusState
+    pure unit
+
+manimani :: String -> State Int Unit
+manimani s = do
+    xs <- get
+    _ <- minusState
+    if s == "down" then
+      plusState 1
+    else
+      plusState 10
+    pure unit
+
+
 
 -- modStartRow :: Int -> State Int Unit
 -- modStartRow i = modify (\sum -> sum)
@@ -155,4 +221,5 @@ getKeyName i (PressedKeyInfo pki) = do
        _   -> pki.name
   log name
   log $ show i
+
 

@@ -13,6 +13,7 @@ You can edit this file as you like.
   , "node-streams"
   , "promises"
   , "psci-support"
+  , "refs"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
