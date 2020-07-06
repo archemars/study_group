@@ -101,17 +101,14 @@ displayTxt screenRow txtReords srs (PressedKeyInfo pki) = do
        "k" -> "up"
        "l" -> "right"
        _   -> pki.name
-  let newStartRow = case name of
-       "left"  -> screenRow
-       "down" -> screenRow + 1
-       "up" -> screenRow - 1
-       "right" -> screenRow
-       _   -> screenRow
+  case name of
+       "down" -> R.modify_ (\s -> s + 1) srs
+       "up" -> R.modify_ (\s -> if s < 1 then s else s - 1) srs
+       _   -> R.modify_ (\s -> s) srs
+  newStartRow  <- R.read srs
   let displayTxt = filter (\x -> newStartRow < x.row && x.row < (newStartRow + screenRow)) txtReords
-  -- showTxtRecord displayTxt
-  R.modify_ (\s -> s + 1) srs
-  i <- R.read srs
-  logShow i
+  showTxtRecord displayTxt
+  -- logShow newStartRow
   -- modify_ (_ + 1)
   -- logShow $ runState srs 0
   -- logShow $ runState (manimani name) 0
