@@ -58,7 +58,8 @@ main = do
                    3 -> getFileName args
                    _ -> Nothing
 
-  txt <- readTextFile UTF8 "hoge.txt"
+  -- txt <- readTextFile UTF8 "hoge.txt"
+  txt <- readTextFile UTF8 "fuga.csv"
   let txtRecord = createTextRecord txt
   let startRow = 0
   -- let displayTxtiiii = filter (\x -> startRow < x.row && x.row < (startRow + screenRow)) txtRecord
@@ -102,27 +103,12 @@ displayTxt screenRow txtReords srs (PressedKeyInfo pki) = do
        "l" -> "right"
        _   -> pki.name
   case name of
-       "down" -> R.modify_ (\s -> s + 1) srs
+       "down" -> R.modify_ (\s -> if (s + screenRow) > (length txtReords) then s else s + 1) srs
        "up" -> R.modify_ (\s -> if s < 1 then s else s - 1) srs
        _   -> R.modify_ (\s -> s) srs
   newStartRow  <- R.read srs
   let displayTxt = filter (\x -> newStartRow < x.row && x.row < (newStartRow + screenRow)) txtReords
   showTxtRecord displayTxt
-  -- logShow newStartRow
-  -- modify_ (_ + 1)
-  -- logShow $ runState srs 0
-  -- logShow $ runState (manimani name) 0
-
-
-  -- plusState 1
-  -- _ <- minusState
-
-  -- logShow $ runState manip2 0
-
--- main :: Effect Unit
--- main = do
---   -- logShow $ runState manip (3 : 2 : 1 : Nil)
---   logShow $ runState manip2 0
 
 startRowState :: Tuple Unit Int
 startRowState = runState (pure unit) 0
@@ -166,12 +152,6 @@ manimani s = do
       plusState 10
     pure unit
 
-
-
--- modStartRow :: Int -> State Int Unit
--- modStartRow i = modify (\sum -> sum)
--- TODO XXX startRowのいちを保持しておきたいけどやりかたがわからん
--- stateモナドかreader writer モナドを使えばいい感じにできそうなんだけども
 
 type RowRange = {
    start:: Int
