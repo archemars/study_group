@@ -9,6 +9,7 @@ import Node.Process (stdin, stdout, argv)
 import Data.Function.Uncurried (Fn1, runFn1, Fn4, runFn4)
 import Data.Generic.Rep (class Generic)
 import Data.Array (replicate, length, head, reverse, filter, snoc)
+import Data.String (length) as S
 import Data.Traversable (for)
 import Node.FS.Sync(readTextFile)
 import Data.Maybe (Maybe(Just, Nothing))
@@ -55,11 +56,24 @@ main = do
   onKeypress stdin stdout true (displayTxt screenRow txtRecord srs)
 
 
+sepalater :: Pattern
+sepalater = Pattern ","
+
 showTxtRecord :: Array TxtRecord -> Effect Unit
 showTxtRecord t = do
+  let firstRow = case head t of
+              Just h -> h.char
+              Nothing -> ""
+
+  -- top line
+  log $ "+" <> (foldl (\x -> \_ -> x <> "-") "" $ replicate (S.length firstRow) "-") <> "+"
   a <- for t \x -> do
+     let columns = split sepalater x.char
+     let rowLength = S.length x.char + length columns
      log x.char
-  log ""
+
+  -- bottom line
+  log $ "+" <> (foldl (\x -> \_ -> x <> "-") "" $ replicate (S.length firstRow) "-") <> "+"
 
 type TxtRecord = {row:: Int, char:: String}
 initTxtRecord :: Array TxtRecord
