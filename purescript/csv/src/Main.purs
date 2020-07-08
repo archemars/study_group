@@ -66,14 +66,15 @@ showTxtRecord t = do
               Nothing -> ""
 
   -- top line
-  log $ "+" <> (foldl (\x -> \_ -> x <> "-") "" $ replicate (S.length firstRow) "-") <> "+"
+  log $ "+ " <> (foldl (\x -> \_ -> x <> "-") "" $ replicate (((S.length firstRow) * 2) - 2) "-") <> " +"
   a <- for t \x -> do
      let columns = split sepalater x.char
      let rowLength = S.length x.char + length columns
-     log x.char
+     log $ "+ " <> (foldl (\x -> \_ -> x <> "-") "" $ replicate ((S.length x.char * 2) - 2) "-") <> " +"
+     log $ "| " <> (foldl (\x -> \y -> if x == "" then y else x <> " | " <> y) "" columns) <> " |"
 
   -- bottom line
-  log $ "+" <> (foldl (\x -> \_ -> x <> "-") "" $ replicate (S.length firstRow) "-") <> "+"
+  log $ "+ " <> (foldl (\x -> \_ -> x <> "-") "" $ replicate (((S.length firstRow) * 2) - 2) "-") <> " +"
 
 type TxtRecord = {row:: Int, char:: String}
 initTxtRecord :: Array TxtRecord
