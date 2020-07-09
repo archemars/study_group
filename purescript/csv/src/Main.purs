@@ -36,7 +36,7 @@ onResize = runFn1 onResizeImpl
 main :: Effect Unit
 main = do
   let screenCol = getColumns
-  let screenRow = getRows
+  let screenRow = getRows/2
 
   onResize showSize
   args <- argv
