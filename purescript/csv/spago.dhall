@@ -11,6 +11,7 @@ You can edit this file as you like.
   , "lists"
   , "node-fs"
   , "node-process"
+  , "partial"
   , "psci-support"
   , "refs"
   , "strings"
