@@ -19,7 +19,7 @@ import Data.String.Pattern (Pattern(..))
 import Data.Foldable (foldl)
 import Effect.Ref as R
 
-import Parser (hoge, convertToCrlf)
+import Parser (hoge, parse)
 
 
 foreign import getColumns :: Int
@@ -57,7 +57,7 @@ main = do
   onKeypress stdin stdout true (displayTxt screenRow txtRecord srs)
 
   log hoge
-  log $ convertToCrlf txt
+  logShow $ parse txt "asdf"
 
 
 sepalater :: Pattern

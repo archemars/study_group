@@ -8,7 +8,7 @@ import Node.Stream (Readable, Writable)
 import Node.Process (stdin, stdout, argv)
 import Data.Function.Uncurried (Fn1, runFn1, Fn4, runFn4)
 import Data.Generic.Rep (class Generic)
-import Data.Array (replicate, length, head, reverse, filter, snoc)
+import Data.Array (replicate, length, head, reverse, filter, snoc, cons)
 import Data.String (length) as S
 import Data.Traversable (for)
 import Node.FS.Sync(readTextFile)
@@ -52,11 +52,14 @@ convertToCrlf :: String -> String
 convertToCrlf s = case regex "\r\n|\r|\n" regexFlag of
                     Left r -> "errrrrr"
                     Right r -> replace r "\r\n" s
--- createTextRecord txt =  foldl (\x -> \y -> snoc x {row: (length x + 1), char: y}) initTxtRecord (split (Pattern "\n") txt)
+
+initValue :: Array (Array String)
+initValue = []
 
 -- static readonly Dictionary<Delimiter, char> Delimiters = new Dictionary<Delimiter, char>() {{Delimiter.Comma, ','}, {Delimiter.Tab, '\t'}};
--- parse :: String -> Delimiter -> Array Array String
--- parse s d = ???
+parse :: String -> Delimiter -> Array (Array String)
+parse s d = foldl (\val -> \char ->  val <> [[char]]) initValue (split (Pattern "") (convertToCrlf s))
+-- createTextRecord txt =  foldl (\x -> \y -> snoc x {row: (length x + 1), char: y}) initTxtRecord (split (Pattern "\n") txt)
 
 -- static List<List<string>> Parse(string data, Delimiter delimiter)
 -- {
