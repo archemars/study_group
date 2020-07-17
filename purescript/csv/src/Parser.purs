@@ -61,6 +61,18 @@ parse :: String -> Delimiter -> Array (Array String)
 parse s d = foldl (\val -> \char ->  val <> [[char]]) initValue (split (Pattern "") (convertToCrlf s))
 -- createTextRecord txt =  foldl (\x -> \y -> snoc x {row: (length x + 1), char: y}) initTxtRecord (split (Pattern "\n") txt)
 
+-- 次はafterquote とか insidequoteとかごとのcaseを追加？
+readChar :: String -> String
+readChar char = case char of
+                  "\"" -> ""
+                  "1" -> ""
+                  "2" -> ""
+                  "3" -> ""
+                  "4" -> ""
+                  "5" -> ""
+                  _ -> ""
+
+
 -- static List<List<string>> Parse(string data, Delimiter delimiter)
 -- {
 -- 	var sheet = new List<List<string>>();
@@ -75,7 +87,7 @@ parse s d = foldl (\val -> \char ->  val <> [[char]]) initValue (split (Pattern 
 -- 
 -- 	ConvertToCrlf(ref data);
 -- 
--- 	foreach (var character in data)
+-- 	foreach (var character in data) <- IMACOCO
 -- 	{
 -- 		// Inside the quotation marks.
 -- 		if (insideQuoteCell)
