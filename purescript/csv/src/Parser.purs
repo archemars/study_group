@@ -20,8 +20,7 @@ import Data.String.Regex (Regex, regex, replace)
 import Data.String.Regex.Flags (RegexFlags(..), RegexFlagsRec, noFlags)
 import Data.Foldable (foldl)
 import Data.Either (Either(..), fromRight)
-
-
+import Effect.Ref (new, modify_, Ref, read)
 
 hoge :: String
 hoge = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -32,6 +31,9 @@ hoge = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 -- 	Tab
 -- }
 type Delimiter = String
+type AfterQuote = Boolean
+type InsideQuoteCell = Boolean
+type ReadyToEndQuote = Boolean
 
 
 -- static void ConvertToCrlf(ref string data)
@@ -56,22 +58,91 @@ convertToCrlf s = case regex "\r\n|\r|\n" regexFlag of
 initValue :: Array (Array String)
 initValue = []
 
+-- TODO column validate?
+
 -- static readonly Dictionary<Delimiter, char> Delimiters = new Dictionary<Delimiter, char>() {{Delimiter.Comma, ','}, {Delimiter.Tab, '\t'}};
-parse :: String -> Delimiter -> Array (Array String)
-parse s d = foldl (\val -> \char ->  val <> [[char]]) initValue (split (Pattern "") (convertToCrlf s))
+parse :: String -> Delimiter -> Effect Array (Array String)
+parse s d = do
+  aq <- new false
+  iqc <- new false
+  rteq <- new false
+
+  foldl (\val -> \char -> readChar val char aq iqx rteq) initValue (split (Pattern "") (convertToCrlf s))
+
+addChar :: String -> String -> String
+addChar str char = str <> char
+
+addCell :: Array String -> String -> Array String
+addCell row cell = row <> [cell]
+
+addRow :: Array (Array String) -> Array String -> Array (Array String)
+addRow csv row = csv <> row
+
 -- createTextRecord txt =  foldl (\x -> \y -> snoc x {row: (length x + 1), char: y}) initTxtRecord (split (Pattern "\n") txt)
 
 -- 次はafterquote とか insidequoteとかごとのcaseを追加？
-readChar :: String -> String
-readChar char = case char of
-                  "\"" -> ""
-                  "1" -> ""
-                  "2" -> ""
-                  "3" -> ""
-                  "4" -> ""
-                  "5" -> ""
-                  _ -> ""
+readChar :: Array (Array String) -> String -> AfterQuote -> InsideQuoteCell -> ReadyToEndQuote -> Effect Array (Array String)
+readChar csv "\"" true true _  = do
+  modify_ (\s -> false) srs -- TODO ref bool afterQuote
+  modify_ (\s -> false) srs -- TODO ref bool readyToEndQuote
+  pure "\\\""
 
+readChar csv char true true true = do
+  if char == "\"" then
+    modify_ (\s -> false) srs -- TODO ref bool afterQuote
+    modify_ (\s -> false) srs -- TODO ref bool readyToEndQuote
+    pure char
+  else
+    modify_ (\s -> false) srs -- TODO ref bool afterQuote
+    modify_ (\s -> false) srs -- TODO ref bool insideQuoteCell
+    modify_ (\s -> false) srs -- TODO ref bool readyToEndQuote
+    if char == delimiterChar then
+        addCell row cell
+    else
+        -- todo ??????_
+
+readChar csv char true true false = do
+  modify_ (\s -> false) srs -- TODO ref bool afterQuote
+  modify_ (\s -> false) srs -- TODO ref bool readyToEndQuote
+  pure char
+
+readChar false _ _ "\"" = do
+  modify_ (\s -> true) srs -- TODO ref bool afterQuote
+  modify_ (\s -> true) srs -- TODO ref bool readyToEndQuote
+
+readChar false _ _ char = do
+  pure char
+
+readChar csv char _ false _ = do
+  if char == delimiterChar then
+    addCell row cell
+  else if char == "\n"
+    addCell row cell
+    addRow row cell
+  else if char == "\""
+    modify_ (\s -> true) srs -- TODO ref bool insideQuoteCell
+  else
+    pure char
+
+--   case char of
+--     "\"" -> do
+--                 "\\\""
+--                 "\\\""
+--     "1" -> ""
+--     "2" -> ""
+--     "3" -> ""
+--     "4" -> ""
+--     "5" -> ""
+--     _ -> ""
+
+getAfterQuote :: Ref Boolean -> Effect Boolean
+getAfterQuote r = read r
+
+getInsideQuoteCell :: Ref Boolean -> Effect Boolean
+getInsideQuoteCell r = read r
+
+getReadyToEndQuote :: Ref Boolean -> Effect Boolean
+getReadyToEndQuote r = read r
 
 -- static List<List<string>> Parse(string data, Delimiter delimiter)
 -- {
@@ -94,44 +165,44 @@ readChar char = case char of
 -- 		{
 -- 			if (afterQuote)
 -- 			{
--- 				if (character == '"')
--- 				{
--- 					// Consecutive quotes : A quotation mark.
--- 					cell.Append("\"");
--- 					afterQuote = false;
--- 				}
--- 				else if (readyToEndQuote && character != '"')
--- 				{
--- 					// Non-consecutive quotes : End of the quotation.
--- 					afterQuote = false;
--- 					insideQuoteCell = false;
+-- 				                                    if (character == '"')
+-- 				                                    {
+-- 				                                    	// Consecutive quotes : A quotation mark.
+-- 				                                    	cell.Append("\"");
+-- 				                                    	afterQuote = false;
+-- 				                                    }
+-- 				                                    else if (readyToEndQuote && character != '"')
+-- 				                                    {
+-- 				                                    	// Non-consecutive quotes : End of the quotation.
+-- 				                                    	afterQuote = false;
+-- 				                                    	insideQuoteCell = false;
 -- 
--- 					if (character == delimiterChar)
--- 					{
--- 						AddCell(row, cell);
--- 					}
--- 				}
--- 				else
--- 				{
--- 					cell.Append(character);
--- 					afterQuote = false;
--- 				}
+-- 				                                    	if (character == delimiterChar)
+-- 				                                    	{
+-- 				                                    		AddCell(row, cell);
+-- 				                                    	}
+-- 				                                    }
+-- 				                                    else
+-- 				                                    {
+-- 				                                    	cell.Append(character);
+-- 				                                    	afterQuote = false;
+-- 				                                    }
 -- 
--- 				readyToEndQuote = false;
+-- 				                                    readyToEndQuote = false;
 -- 			}
 -- 			else
 -- 			{
--- 				if (character == '"')
--- 				{
--- 					// A quot mark inside the quotation.
--- 					// Determine by the next character.
--- 					afterQuote = true;
--- 					readyToEndQuote = true;
--- 				}
--- 				else
--- 				{
--- 					cell.Append(character);
--- 				}
+-- 				                                    if (character == '"')
+-- 				                                    {
+-- 				                                    	// A quot mark inside the quotation.
+-- 				                                    	// Determine by the next character.
+-- 				                                    	afterQuote = true;
+-- 				                                    	readyToEndQuote = true;
+-- 				                                    }
+-- 				                                    else
+-- 				                                    {
+-- 				                                    	cell.Append(character);
+-- 				                                    }
 -- 			}
 -- 		}
 -- 		else
