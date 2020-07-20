@@ -69,14 +69,14 @@ parse s d = do
 
   foldl (\val -> \char -> readChar val char aq iqx rteq) initValue (split (Pattern "") (convertToCrlf s))
 
-addChar :: String -> String -> String
-addChar str char = str <> char
+addChar :: Array (Array String) -> Array String -> String -> String -> Array (Array String)
+addChar csv row str char = csv <> [row <> [str <> char]]
 
-addCell :: Array String -> String -> Array String
-addCell row cell = row <> [cell]
+addCell :: Array (Array String) -> Array String -> String -> Array (Array String)
+addCell csv row cell = csv <> [row <> [cell]]
 
 addRow :: Array (Array String) -> Array String -> Array (Array String)
-addRow csv row = csv <> row
+addRow csv row = csv <> [row]
 
 -- createTextRecord txt =  foldl (\x -> \y -> snoc x {row: (length x + 1), char: y}) initTxtRecord (split (Pattern "\n") txt)
 
@@ -85,7 +85,8 @@ readChar :: Array (Array String) -> String -> AfterQuote -> InsideQuoteCell -> R
 readChar csv "\"" true true _  = do
   modify_ (\s -> false) srs -- TODO ref bool afterQuote
   modify_ (\s -> false) srs -- TODO ref bool readyToEndQuote
-  pure "\\\""
+
+  addChar csv "\\\""
 
 readChar csv char true true true = do
   if char == "\"" then
