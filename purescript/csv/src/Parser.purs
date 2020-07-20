@@ -86,33 +86,55 @@ readChar csv "\"" true true _  = do
   modify_ (\s -> false) srs -- TODO ref bool afterQuote
   modify_ (\s -> false) srs -- TODO ref bool readyToEndQuote
 
-  addChar csv "\\\""
+  let csv_ = init csv
+  let row = tail csv
+  let str = tail row
+  addChar csv_ row str char
 
 readChar csv char true true true = do
   if char == "\"" then
     modify_ (\s -> false) srs -- TODO ref bool afterQuote
     modify_ (\s -> false) srs -- TODO ref bool readyToEndQuote
-    pure char
+
+    let csv_ = init csv
+    let row = tail csv
+    let str = tail row
+    addChar csv_ row str char
   else
     modify_ (\s -> false) srs -- TODO ref bool afterQuote
     modify_ (\s -> false) srs -- TODO ref bool insideQuoteCell
     modify_ (\s -> false) srs -- TODO ref bool readyToEndQuote
     if char == delimiterChar then
-        addCell row cell
+        -- addCell row cell
+
+        let csv_ = init csv
+        let row = tail csv
+        let str = tail row
+        addCell csv_ row []
     else
         -- todo ??????_
+        csv
 
 readChar csv char true true false = do
   modify_ (\s -> false) srs -- TODO ref bool afterQuote
   modify_ (\s -> false) srs -- TODO ref bool readyToEndQuote
-  pure char
+
+  -- pure char
+  let csv_ = init csv
+  let row = tail csv
+  let str = tail row
+  addChar csv_ row str char
 
 readChar false _ _ "\"" = do
   modify_ (\s -> true) srs -- TODO ref bool afterQuote
   modify_ (\s -> true) srs -- TODO ref bool readyToEndQuote
 
 readChar false _ _ char = do
-  pure char
+  -- pure char
+  let csv_ = init csv
+  let row = tail csv
+  let str = tail row
+  addChar csv_ row str char
 
 readChar csv char _ false _ = do
   if char == delimiterChar then
@@ -123,7 +145,11 @@ readChar csv char _ false _ = do
   else if char == "\""
     modify_ (\s -> true) srs -- TODO ref bool insideQuoteCell
   else
-    pure char
+    -- pure char
+    let csv_ = init csv
+    let row = tail csv
+    let str = tail row
+    addChar csv_ row str char
 
 --   case char of
 --     "\"" -> do
