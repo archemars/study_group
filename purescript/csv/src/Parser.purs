@@ -81,7 +81,21 @@ addRow csv row = csv <> [row]
 -- createTextRecord txt =  foldl (\x -> \y -> snoc x {row: (length x + 1), char: y}) initTxtRecord (split (Pattern "\n") txt)
 
 -- 次はafterquote とか insidequoteとかごとのcaseを追加？
-readChar :: Array (Array String) -> String -> AfterQuote -> InsideQuoteCell -> ReadyToEndQuote -> Effect Array (Array String)
+readChar :: Array (Array String) -> String -> Ref AfterQuote -> Ref InsideQuoteCell -> Ref ReadyToEndQuote -> Effect Array (Array String)
+readChar csv char raq riqc rrteq = do
+  aq   <- read raq
+  iqc  <- read riqc
+  rteq <- read rrteq
+
+  csv_ = if char == "\"" && aq == true iqx == true then
+         else if
+         else
+           csv
+
+  pure csv_
+
+  -- XXX TODO ↓のパターンを↑のifに入れる
+
 readChar csv "\"" true true _  = do
   modify_ (\s -> false) srs -- TODO ref bool afterQuote
   modify_ (\s -> false) srs -- TODO ref bool readyToEndQuote
