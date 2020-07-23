@@ -87,16 +87,26 @@ readChar csv char raq riqc rrteq = do
   iqc  <- read riqc
   rteq <- read rrteq
 
-  csv_ = if char == "\"" && aq == true iqx == true then
-         else if
+  csv_ <- if char == "\"" && aq == true iqx == true then
+           hoge csv_ char
+         else if aq == true iqx == true && rteq == true
+           fuga csv_ char
+         else if aq == true iqx == true && rteq == false
+           piyo csv_ char
+         else if char == "\"" && aq == false
+           foo csv_ char
+         else if aq == false
+           bar csv_ char
+         else if iqc == false
+           baz csv_ char
          else
-           csv
+           pure csv
 
   pure csv_
 
   -- XXX TODO ↓のパターンを↑のifに入れる
 
-readChar csv "\"" true true _  = do
+hoge csv char = do
   modify_ (\s -> false) srs -- TODO ref bool afterQuote
   modify_ (\s -> false) srs -- TODO ref bool readyToEndQuote
 
@@ -105,7 +115,7 @@ readChar csv "\"" true true _  = do
   let str = tail row
   addChar csv_ row str char
 
-readChar csv char true true true = do
+fuga csv char = do
   if char == "\"" then
     modify_ (\s -> false) srs -- TODO ref bool afterQuote
     modify_ (\s -> false) srs -- TODO ref bool readyToEndQuote
@@ -129,7 +139,7 @@ readChar csv char true true true = do
         -- todo ??????_
         csv
 
-readChar csv char true true false = do
+piyo csv char true true false = do
   modify_ (\s -> false) srs -- TODO ref bool afterQuote
   modify_ (\s -> false) srs -- TODO ref bool readyToEndQuote
 
@@ -139,18 +149,18 @@ readChar csv char true true false = do
   let str = tail row
   addChar csv_ row str char
 
-readChar false _ _ "\"" = do
+foo false _ _ "\"" = do
   modify_ (\s -> true) srs -- TODO ref bool afterQuote
   modify_ (\s -> true) srs -- TODO ref bool readyToEndQuote
 
-readChar false _ _ char = do
+bar false _ _ char = do
   -- pure char
   let csv_ = init csv
   let row = tail csv
   let str = tail row
   addChar csv_ row str char
 
-readChar csv char _ false _ = do
+baz csv char _ false _ = do
   if char == delimiterChar then
     addCell row cell
   else if char == "\n"
