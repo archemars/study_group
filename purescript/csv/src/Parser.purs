@@ -8,7 +8,7 @@ import Node.Stream (Readable, Writable)
 import Node.Process (stdin, stdout, argv)
 import Data.Function.Uncurried (Fn1, runFn1, Fn4, runFn4)
 import Data.Generic.Rep (class Generic)
-import Data.Array (replicate, length, head, reverse, filter, snoc, cons)
+import Data.Array (replicate, length, head, reverse, filter, snoc, cons, init, tail, last)
 import Data.String (length) as S
 import Data.Traversable (for)
 import Node.FS.Sync(readTextFile)
@@ -22,8 +22,8 @@ import Data.Foldable (foldl)
 import Data.Either (Either(..), fromRight)
 import Effect.Ref (new, modify_, Ref, read)
 
-hoge :: String
-hoge = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+hogehoge :: String
+hogehoge = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
 -- public enum Delimiter
 -- {
@@ -53,7 +53,7 @@ regexFlag = RegexFlags
 convertToCrlf :: String -> String
 convertToCrlf s = case regex "\r\n|\r|\n" regexFlag of
                     Left r -> "errrrrr"
-                    Right r -> replace r "\r\n" s
+                    Right r -> replace r "\n" s
 
 initValue :: Array (Array String)
 initValue = []
@@ -61,13 +61,13 @@ initValue = []
 -- TODO column validate?
 
 -- static readonly Dictionary<Delimiter, char> Delimiters = new Dictionary<Delimiter, char>() {{Delimiter.Comma, ','}, {Delimiter.Tab, '\t'}};
-parse :: String -> Delimiter -> Effect Array (Array String)
+parse :: String -> Delimiter -> Effect (Array (Array String))
 parse s d = do
-  aq <- new false
-  iqc <- new false
-  rteq <- new false
+  raq <- new false
+  riqc <- new false
+  rrteq <- new false
 
-  foldl (\val -> \char -> readChar val char aq iqx rteq) initValue (split (Pattern "") (convertToCrlf s))
+  foldl (\val -> \char -> readChar val char raq riqc rrteq) (pure initValue) (split (Pattern "") (convertToCrlf s))
 
 addChar :: Array (Array String) -> Array String -> String -> String -> Array (Array String)
 addChar csv row str char = csv <> [row <> [str <> char]]
@@ -81,75 +81,286 @@ addRow csv row = csv <> [row]
 -- createTextRecord txt =  foldl (\x -> \y -> snoc x {row: (length x + 1), char: y}) initTxtRecord (split (Pattern "\n") txt)
 
 -- 次はafterquote とか insidequoteとかごとのcaseを追加？
-readChar :: Array (Array String) -> String -> AfterQuote -> InsideQuoteCell -> ReadyToEndQuote -> Effect Array (Array String)
-readChar csv "\"" true true _  = do
-  modify_ (\s -> false) srs -- TODO ref bool afterQuote
-  modify_ (\s -> false) srs -- TODO ref bool readyToEndQuote
+readChar :: Effect (Array (Array String)) -> String -> Ref AfterQuote -> Ref InsideQuoteCell -> Ref ReadyToEndQuote -> Effect (Array (Array String))
+readChar _csv char raq riqc rrteq = do
+  csv   <- _csv
+  aq   <- read raq
+  iqc  <- read riqc
+  rteq <- read rrteq
 
-  let csv_ = init csv
-  let row = tail csv
-  let str = tail row
-  addChar csv_ row str char
+  log "-----"
+  log $ "aq  : " <> (show aq  )
+  log $ "iqc : " <> (show iqc )
+  log $ "rteq: " <> (show rteq)
 
-readChar csv char true true true = do
+  log $ "char: " <> (show char)
+  log $ "before: " <> (show csv)
+  if char == "\"" && aq == true && iqc == true then
+    log "route hoge"
+  else if aq == true && iqc == true && rteq == true then
+    log "route fuga"
+  else if aq == true && iqc == true && rteq == false then
+    log "route piyo"
+  else if char == "\"" && aq == false then
+    log "route foo"
+  else if aq == false then
+    log "route bar"
+  else if iqc == false then
+    log "route baz"
+  else
+    log "route eles"
+  -- csv_ <- caseParse csv char aq iqc iteq
+  csv_ <- if iqc == false then
+            baz csv char raq riqc rrteq
+          else if char == "\"" && aq == true && iqc == true then
+            hoge csv char raq riqc rrteq
+          else if aq == true && iqc == true && rteq == true then
+            fuga csv char raq riqc rrteq
+          else if aq == true && iqc == true && rteq == false then
+            piyo csv char raq riqc rrteq
+          else if char == "\"" && aq == false && iqc == true then
+            foo csv char raq riqc rrteq
+          else if aq == false && iqc == true then
+            foofoo csv char raq riqc rrteq
+          -- else if aq == false then
+          --   bar csv char raq riqc rrteq
+          else
+            pure []
+
+  log $ "after: " <> (show csv_)
+  pure csv_
+
+  -- XXX TODO ↓のパターンを↑のifに入れる
+
+
+-- caseParse :: Effect Array (Array String) -> String -> AfterQuote -> InsideQuoteCell -> ReadyToEndQuote -> Effect Array (Array String)
+-- caseParse csv "\"" (Ref true) true _ = hoge csv "\""
+-- caseParse csv char true true true = fuga csv char
+-- caseParse csv char true true false = piyo csv char
+-- caseParse csv "\"" false _ _ = foo csv "\""
+-- caseParse csv char false _ _ = bar csv char
+-- caseParse csv char _ false _ = baz csv char
+-- caseParse csv char _ _ _ = pure csv
+
+hoge csv char raq riqc rrteq = do
+  modify_ (\s -> false) raq -- TODO ref bool afterQuote
+  modify_ (\s -> false) rrteq -- TODO ref bool readyToEndQuote
+
+  -- let csv_ = init csv
+  -- let row = tail csv
+  -- let str = tail row
+  -- let csv_ = case init csv of
+  --              Just x -> x
+  --              Nothing -> []
+  -- let row = case last csv of
+  --             Just x -> x
+  --             Nothing -> []
+  -- let str = case last row of
+  --             Just x -> x
+  --             Nothing -> ""
+  let csv_ = case init csv of
+               Just x -> x
+               Nothing -> []
+  let lastRow = case last csv of
+              Just x -> x
+              Nothing -> []
+  let row = case init lastRow of
+              Just x -> x
+              Nothing -> []
+  let str = case last lastRow of
+              Just x -> x
+              Nothing -> ""
+  pure $ addChar csv_ row str char
+
+fuga csv char raq riqc rrteq = do
+  -- let csv_ = init csv
+  -- let row = tail csv
+  -- let str = tail row
+  let csv_ = case init csv of
+               Just x -> x
+               Nothing -> []
+  let row = case last csv of
+              Just x -> x
+              Nothing -> []
+  let str = case last row of
+              Just x -> x
+              Nothing -> ""
+  -- let csv_ = case init csv of
+  --              Just x -> x
+  --              Nothing -> []
+  -- let lastRow = case last csv of
+  --             Just x -> x
+  --             Nothing -> []
+  -- let row = case init lastRow of
+  --             Just x -> x
+  --             Nothing -> []
+  -- let str = case last lastRow of
+  --             Just x -> x
+  --             Nothing -> ""
+  aq   <- read raq
+
+  modify_ (\s -> false) rrteq -- TODO ref bool readyToEndQuote
+  modify_ (\s -> false) raq -- TODO ref bool afterQuote
+
+  iqc  <- read riqc
+  if char /= "\"" then
+    modify_ (\s -> false) riqc -- TODO ref bool insideQuoteCell
+  else
+    modify_ (\s -> iqc) riqc -- TODO ref bool insideQuoteCell
+
+  let _csv_ = if char == "\"" then
+                -- let csv_ = init csv
+                -- let row = tail csv
+                -- let str = tail row
+                addChar csv_ row str char
+                -- csv
+              else
+                -- if char == delimiterChar then TODO
+                if char == "," then
+                    -- addCell row cell
+
+                    -- let csv_ = init csv
+                    -- let row = tail csv
+                    -- let str = tail row
+                    addCell csv_ (row <> []) ""
+                else if char == "\n" then
+                    -- addRow csv_ (row <> []) ""
+                    -- addRow csv row = csv <> [row]
+                    addRow csv []
+                else
+                    -- todo ??????_
+                    csv
+  pure _csv_
+
+piyo csv char raq riqc rrteq = do
+  modify_ (\s -> false) raq -- TODO ref bool afterQuote
+  modify_ (\s -> false) rrteq -- TODO ref bool readyToEndQuote
+
+  -- pure char
+  -- let csv_ = init csv
+  -- let row = tail csv
+  -- let str = tail row
+  -- let csv_ = case init csv of
+  --              Just x -> x
+  --              Nothing -> []
+  -- let row = case last csv of
+  --             Just x -> x
+  --             Nothing -> []
+  -- let str = case last row of
+  --             Just x -> x
+  --             Nothing -> ""
+  let csv_ = case init csv of
+               Just x -> x
+               Nothing -> []
+  let lastRow = case last csv of
+              Just x -> x
+              Nothing -> []
+  let row = case init lastRow of
+              Just x -> x
+              Nothing -> []
+  let str = case last lastRow of
+              Just x -> x
+              Nothing -> ""
+  pure $ addChar csv_ row str char
+
+foo csv char raq riqc rrteq = do
+  modify_ (\s -> true) raq -- TODO ref bool afterQuote
+  modify_ (\s -> true) rrteq -- TODO ref bool readyToEndQuote
+  pure csv
+
+foofoo csv char raq riqc rrteq = do
+  let csv_ = case init csv of
+               Just x -> x
+               Nothing -> []
+  let lastRow = case last csv of
+              Just x -> x
+              Nothing -> []
+  let row = case init lastRow of
+              Just x -> x
+              Nothing -> []
+  let str = case last lastRow of
+              Just x -> x
+              Nothing -> ""
+  pure $ addChar csv_ row str char
+
+bar :: Array (Array String) -> String -> Ref AfterQuote -> Ref InsideQuoteCell -> Ref ReadyToEndQuote -> Effect (Array (Array String))
+bar csv char raq riqc rrteq = do
+  -- pure char
+  -- let csv_ = case init csv of
+  --              Just x -> x
+  --              Nothing -> []
+  -- let row = case last csv of
+  --             Just x -> x
+  --             Nothing -> []
+  -- let str = case last row of
+  --             Just x -> x
+  --             Nothing -> ""
+  let csv_ = case init csv of
+               Just x -> x
+               Nothing -> []
+  let lastRow = case last csv of
+              Just x -> x
+              Nothing -> []
+  let row = case init lastRow of
+              Just x -> x
+              Nothing -> []
+  let str = case last lastRow of
+              Just x -> x
+              Nothing -> ""
+  pure $ addChar csv_ row str char
+
+baz :: Array (Array String) -> String -> Ref AfterQuote -> Ref InsideQuoteCell -> Ref ReadyToEndQuote -> Effect (Array (Array String))
+baz csv char raq riqc rrteq = do
+  -- let csv_ = init csv
+  -- let row = tail csv
+  -- let str = tail row
+  let csv_ = case init csv of
+               Just x -> x
+               Nothing -> []
+  let lastRow = case last csv of
+              Just x -> x
+              Nothing -> []
+  let row = case init lastRow of
+              Just x -> x
+              Nothing -> []
+  let str = case last lastRow of
+              Just x -> x
+              Nothing -> ""
+  -- let str = case last lastCell of
+  --             Just x -> x
+  --             Nothing -> ""
+  logShow csv_
+  logShow row
+  log str
+  -- if char == delimiterChar then TODO
+  -- if char == "\n" then
+  --   log "#jsidjfaidiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiif"
+  -- else
+  --   log char
+  let _csv_ =
+              if char == "," then
+                addCell csv_ (row <> []) str
+              else if char == "\n" then
+                -- addCell row cell
+                -- addCell csv_ row str []
+                -- addRow row cell
+                addRow (addCell csv_ row str) row
+              else if char == "\"" then
+                csv
+              else
+                -- pure char
+                -- let csv_ = init csv
+                -- let row = tail csv
+                -- let str = tail row
+                addChar csv_ row "" (str <> char)
+
+  iqc <- read riqc
   if char == "\"" then
-    modify_ (\s -> false) srs -- TODO ref bool afterQuote
-    modify_ (\s -> false) srs -- TODO ref bool readyToEndQuote
+    modify_ (\s -> true) riqc -- TODO ref bool insideQuoteCell
+  else 
+    modify_ (\s -> iqc) riqc -- TODO ref bool insideQuoteCell
 
-    let csv_ = init csv
-    let row = tail csv
-    let str = tail row
-    addChar csv_ row str char
-  else
-    modify_ (\s -> false) srs -- TODO ref bool afterQuote
-    modify_ (\s -> false) srs -- TODO ref bool insideQuoteCell
-    modify_ (\s -> false) srs -- TODO ref bool readyToEndQuote
-    if char == delimiterChar then
-        -- addCell row cell
-
-        let csv_ = init csv
-        let row = tail csv
-        let str = tail row
-        addCell csv_ row []
-    else
-        -- todo ??????_
-        csv
-
-readChar csv char true true false = do
-  modify_ (\s -> false) srs -- TODO ref bool afterQuote
-  modify_ (\s -> false) srs -- TODO ref bool readyToEndQuote
-
-  -- pure char
-  let csv_ = init csv
-  let row = tail csv
-  let str = tail row
-  addChar csv_ row str char
-
-readChar false _ _ "\"" = do
-  modify_ (\s -> true) srs -- TODO ref bool afterQuote
-  modify_ (\s -> true) srs -- TODO ref bool readyToEndQuote
-
-readChar false _ _ char = do
-  -- pure char
-  let csv_ = init csv
-  let row = tail csv
-  let str = tail row
-  addChar csv_ row str char
-
-readChar csv char _ false _ = do
-  if char == delimiterChar then
-    addCell row cell
-  else if char == "\n"
-    addCell row cell
-    addRow row cell
-  else if char == "\""
-    modify_ (\s -> true) srs -- TODO ref bool insideQuoteCell
-  else
-    -- pure char
-    let csv_ = init csv
-    let row = tail csv
-    let str = tail row
-    addChar csv_ row str char
+  pure _csv_
 
 --   case char of
 --     "\"" -> do
