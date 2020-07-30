@@ -19,7 +19,7 @@ import Data.String.Pattern (Pattern(..))
 import Data.Foldable (foldl)
 import Effect.Ref as R
 
-import Parser (hogehoge, parse)
+import Parser (parse)
 
 
 foreign import getColumns :: Int
@@ -56,9 +56,16 @@ main = do
   srs <- R.new 0
   onKeypress stdin stdout true (displayTxt screenRow txtRecord srs)
 
-  log hogehoge
   csv <- parse txt "asdf"
   logShow csv
+
+-- TODO つぎここらへん？
+CSV :: CSV
+CSV = CSV
+  { csv:: Array Row
+  , columnWidth:: Array Int
+  , rowHeight:: Array Int
+  }
 
 
 sepalater :: Pattern
