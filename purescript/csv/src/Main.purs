@@ -57,14 +57,36 @@ main = do
   onKeypress stdin stdout true (displayTxt screenRow txtRecord srs)
 
   csv <- parse txt "asdf"
+  -- logShow initCsv
+  -- TODO つぎここらへん？
+  logShow CSV
+    { csv : getCsv csv
+    , columnWidth : getCsv csv
+    }
+
   logShow csv
 
--- TODO つぎここらへん？
-CSV :: CSV
-CSV = CSV
+
+newtype CSV = CSV
   { csv:: Array Row
   , columnWidth:: Array Int
-  , rowHeight:: Array Int
+  }
+
+newtype Row = Row
+  { row :: Array Cell
+  , maxHeight :: Int
+  }
+
+newtype Cell = Cell
+  { text :: String
+  , paddingText :: String
+  , maxHeight :: Int
+  }
+
+initCsv :: CSV
+initCsv = CSV
+  { csv: []
+  , columnWidth: []
   }
 
 
@@ -156,3 +178,23 @@ getKeyName i (PressedKeyInfo pki) = do
   log $ show i
 
 
+derive instance genericCSV :: Generic CSV _
+instance showCSV :: Show CSV where
+  show (CSV {
+    csv: c
+  , columnWidth: cl
+  }) = "{ csv: " <> (show c) <> " ,columnWidth: " <> (show cl) <> " }"
+
+derive instance genericRow :: Generic Row _
+instance showRow :: Show Row where
+  show (Row {
+    row : r
+  , maxHeight : mh
+  }) = "{ row: " <> (show r) <> " ,maxHeight: " <> (show mh) <> " }"
+
+derive instance genericCell :: Generic Cell _
+instance showCell :: Show Cell where
+  show (Cell {
+    text : t
+  , paddingText : pt
+  }) = "{ test: " <> t <> " ,paddingText: " <> pt <> " }"
