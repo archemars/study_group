@@ -8,7 +8,7 @@ import Node.Stream (Readable, Writable)
 import Node.Process (stdin, stdout, argv)
 import Data.Function.Uncurried (Fn1, runFn1, Fn4, runFn4)
 import Data.Generic.Rep (class Generic)
-import Data.Array (replicate, length, head, reverse, filter, snoc)
+import Data.Array (replicate, length, head, reverse, filter, snoc, zip)
 import Data.String (length) as S
 import Data.Traversable (for)
 import Node.FS.Sync(readTextFile)
@@ -17,6 +17,7 @@ import Node.Encoding(Encoding(UTF8))
 import Data.String.Common (split)
 import Data.String.Pattern (Pattern(..))
 import Data.Foldable (foldl)
+import Data.Tuple (fst, snd)
 import Effect.Ref as R
 
 import Parser (parse)
@@ -58,19 +59,30 @@ main = do
 
   csv <- parse txt "asdf"
   -- logShow initCsv
-  -- TODO つぎここらへん？
-  logShow CSV
-    { csv : getCsv csv
-    , columnWidth : getCsvWidth csv
-    }
+  -- logShow CSV
+  --   { csv : getCsv csv
+  --   , columnWidth : getCsvWidth csv
+  --   }
 
+  -- logShow csv
   logShow csv
+  logShow $ getCsvWidth csv
+  -- logShow $ getCsv csv
 
 getCsv :: Array (Array String) -> Array Row
-getCsv = ???
+getCsv csv = foldl (\val -> \acc -> 
+               val <> Row { row : acc -- TODO ここからkkkkkkkkkkkk
+                          , maxHeight: max (map (\x -> length (split (Pattern "\n") x)) acc)
+                          }
+               ) [] csv
 
 getCsvWidth :: Array (Array String) -> Array Int
-getCsvWidth = ???
+getCsvWidth csv = foldl (\val -> \acc -> 
+                    if length acc == 0 then
+                      val
+                    else if length val == 0 then
+                      map S.length acc
+                    else map (\x -> if fst x < snd x then snd x else fst x) (zip val (map S.length acc))) [] csv
 
 newtype CSV = CSV
   { csv:: Array Row
