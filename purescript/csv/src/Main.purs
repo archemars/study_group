@@ -61,11 +61,16 @@ main = do
   -- TODO つぎここらへん？
   logShow CSV
     { csv : getCsv csv
-    , columnWidth : getCsv csv
+    , columnWidth : getCsvWidth csv
     }
 
   logShow csv
 
+getCsv :: Array (Array String) -> Array Row
+getCsv = ???
+
+getCsvWidth :: Array (Array String) -> Array Int
+getCsvWidth = ???
 
 newtype CSV = CSV
   { csv:: Array Row
