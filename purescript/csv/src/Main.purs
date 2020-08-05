@@ -17,7 +17,7 @@ import Node.Encoding(Encoding(UTF8))
 import Data.String.Common (split)
 import Data.String.Pattern (Pattern(..))
 import Data.Foldable (foldl)
-import Data.Tuple (fst, snd)
+import Data.Tuple (Tuple, fst, snd)
 import Effect.Ref as R
 
 import Parser (parse)
@@ -59,21 +59,27 @@ main = do
 
   csv <- parse txt "asdf"
   -- logShow initCsv
-  -- logShow CSV
-  --   { csv : getCsv csv
-  --   , columnWidth : getCsvWidth csv
-  --   }
 
   -- logShow csv
-  logShow csv
+  -- logShow csv
   -- logShow $ getCsvWidth csv
-  logShow $ getCsv csv -- TODO aaaaaaaaaaaaaaaa can use this ?
+  -- logShow $ getCsv csv
+
+  let csv_ = CSV { csv : getCsv csv
+                 , columnWidth : getCsvWidth csv
+                 }
+  logShow csv_
+  let csvTable = tablize csv_
+  log csvTable
+
+tablize :: CSV -> String
+tablize (CSV csv_) = foldl (\v -> \rows -> v <> (foldl (\x -> \row -> foldl (\y -> \hoge -> "-\n" <> ((fst hoge).paddingText) <> "\n-") "" (zip row csv_.columnWidth)) "" rows)) "" csv_.csv
 
 getCsv :: Array (Array String) -> Array Row
 getCsv csv = foldl (\val -> \acc -> 
-               val <> Row { row : getRow acc
-                          , maxHeight: max (map (\x -> length (split (Pattern "\n") x)) acc)
-                          }
+               val <> [Row { row : getRow acc
+                          , maxHeight: foldl (\v -> \a -> max v a) 0 (map (\x -> length (split (Pattern "\n") x)) acc)
+                          }]
                ) [] csv
 
 getCsvWidth :: Array (Array String) -> Array Int
@@ -86,7 +92,7 @@ getCsvWidth csv = foldl (\val -> \acc ->
 
 getRow :: Array String -> Array Cell
 getRow csv = map (\v -> Cell { text: v
-                             , padingText: "" <> v <> ""
+                             , paddingText: "" <> v <> ""
                              , maxHeight: 0
                              }
                  ) csv
