@@ -66,12 +66,12 @@ main = do
 
   -- logShow csv
   logShow csv
-  logShow $ getCsvWidth csv
-  -- logShow $ getCsv csv
+  -- logShow $ getCsvWidth csv
+  logShow $ getCsv csv -- TODO aaaaaaaaaaaaaaaa can use this ?
 
 getCsv :: Array (Array String) -> Array Row
 getCsv csv = foldl (\val -> \acc -> 
-               val <> Row { row : acc -- TODO ここからkkkkkkkkkkkk
+               val <> Row { row : getRow acc
                           , maxHeight: max (map (\x -> length (split (Pattern "\n") x)) acc)
                           }
                ) [] csv
@@ -83,6 +83,13 @@ getCsvWidth csv = foldl (\val -> \acc ->
                     else if length val == 0 then
                       map S.length acc
                     else map (\x -> if fst x < snd x then snd x else fst x) (zip val (map S.length acc))) [] csv
+
+getRow :: Array String -> Array Cell
+getRow csv = map (\v -> Cell { text: v
+                             , padingText: "" <> v <> ""
+                             , maxHeight: 0
+                             }
+                 ) csv
 
 newtype CSV = CSV
   { csv:: Array Row
