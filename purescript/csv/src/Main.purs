@@ -72,8 +72,20 @@ main = do
   let csvTable = tablize csv_
   log csvTable
 
+-- data TupleRow = Tuple Cell Int
+-- purescriptはtuple使うならrecord使って感じなんですね〜 そしたらzip使いづらいってこと？
+
+
+-- 次は関数分けていこうかな,,,
 tablize :: CSV -> String
-tablize (CSV csv_) = foldl (\v -> \rows -> v <> (foldl (\x -> \row -> foldl (\y -> \hoge -> "-\n" <> ((fst hoge).paddingText) <> "\n-") "" (zip row csv_.columnWidth)) "" rows)) "" csv_.csv
+tablize (CSV csv_) = 
+    foldl (\v -> \(Row row_) -> (foldl (\y -> \tupleCell -> (makeOutLine ((length row_.row) + (foldl (\v -> \a -> v + (S.length (getPt (Cell (fst tupleCell))))) 0 row_))) <> "\n" <> ((getPt (Cell (fst tupleCell))))) "" (zip row_.row csv_.columnWidth))) "" csv_.csv
+
+getPt :: Cell -> String
+getPt (Cell c) = c.paddingText
+
+makeOutLine :: Int -> String
+makeOutLine i = foldl (\v -> \_ -> v <> "-") "" $ replicate i "-"
 
 getCsv :: Array (Array String) -> Array Row
 getCsv csv = foldl (\val -> \acc -> 
