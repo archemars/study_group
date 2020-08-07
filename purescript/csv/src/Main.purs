@@ -65,12 +65,17 @@ main = do
   -- logShow $ getCsvWidth csv
   -- logShow $ getCsv csv
 
-  let csv_ = CSV { csv : getCsv csv
-                 , columnWidth : getCsvWidth csv
-                 }
+  let csv__ = filter (\x -> length x > 0) csv -- TODO filter???
+  let csv_ = { csv : getCsv csv__
+             , columnWidth : getCsvWidth csv__
+             }
   logShow csv_
+
+  log "tablize"
   let csvTable = tablize csv_
   log csvTable
+
+  log ""
 
 -- data TupleRow = Tuple Cell Int
 -- purescriptはtuple使うならrecord使って感じなんですね〜 そしたらzip使いづらいってこと？
@@ -78,20 +83,28 @@ main = do
 
 -- 次は関数分けていこうかな,,,
 tablize :: CSV -> String
-tablize (CSV csv_) = 
-    foldl (\v -> \(Row row_) -> (foldl (\y -> \tupleCell -> (makeOutLine ((length row_.row) + (foldl (\v -> \a -> v + (S.length (getPt (Cell (fst tupleCell))))) 0 row_))) <> "\n" <> ((getPt (Cell (fst tupleCell))))) "" (zip row_.row csv_.columnWidth))) "" csv_.csv
+tablize csv_ = 
+    foldl (\v -> \row_ -> csvFold v row_ csv_) "" csv_.csv
+
+
+csvFold :: String -> Row -> CSV -> String
+csvFold v row_ csv_ = (foldl (\y -> \tupleCell -> (makeOutLine ((length row_.row) + (foldl (\v -> \a -> v + (S.length (getPt (fst tupleCell)))) 0 row_.row))) <> "\n" <> ((getPt (fst tupleCell)))) "" (zipRow row_.row csv_.columnWidth))
+
+
+zipRow :: (Array Cell) -> (Array Int) -> Array (Tuple Cell Int)
+zipRow ac i = zip ac i
 
 getPt :: Cell -> String
-getPt (Cell c) = c.paddingText
+getPt c = c.paddingText
 
 makeOutLine :: Int -> String
 makeOutLine i = foldl (\v -> \_ -> v <> "-") "" $ replicate i "-"
 
 getCsv :: Array (Array String) -> Array Row
 getCsv csv = foldl (\val -> \acc -> 
-               val <> [Row { row : getRow acc
-                          , maxHeight: foldl (\v -> \a -> max v a) 0 (map (\x -> length (split (Pattern "\n") x)) acc)
-                          }]
+               val <> [{ row : getRow acc
+                       , maxHeight: foldl (\v -> \a -> max v a) 0 (map (\x -> length (split (Pattern "\n") x)) acc)
+                       }]
                ) [] csv
 
 getCsvWidth :: Array (Array String) -> Array Int
@@ -103,33 +116,36 @@ getCsvWidth csv = foldl (\val -> \acc ->
                     else map (\x -> if fst x < snd x then snd x else fst x) (zip val (map S.length acc))) [] csv
 
 getRow :: Array String -> Array Cell
-getRow csv = map (\v -> Cell { text: v
-                             , paddingText: "" <> v <> ""
-                             , maxHeight: 0
-                             }
+getRow csv = map (\v -> { text: v
+                        , paddingText: "" <> v <> ""
+                        , maxHeight: 0
+                        }
                  ) csv
 
-newtype CSV = CSV
-  { csv:: Array Row
-  , columnWidth:: Array Int
-  }
+type CSV = { csv :: Array Row , columnWidth :: Array Int }
+-- newtype CSV = CSV
+--   { csv:: Array Row
+--   , columnWidth:: Array Int
+--   }
 
-newtype Row = Row
-  { row :: Array Cell
-  , maxHeight :: Int
-  }
+type Row = { row :: Array Cell , maxHeight :: Int }
+-- newtype Row = Row
+--   { row :: Array Cell
+--   , maxHeight :: Int
+--   }
 
-newtype Cell = Cell
-  { text :: String
-  , paddingText :: String
-  , maxHeight :: Int
-  }
+type Cell = { text :: String , paddingText :: String , maxHeight :: Int }
+-- newtype Cell = Cell
+--   { text :: String
+--   , paddingText :: String
+--   , maxHeight :: Int
+--   }
 
-initCsv :: CSV
-initCsv = CSV
-  { csv: []
-  , columnWidth: []
-  }
+-- initCsv :: CSV
+-- initCsv = CSV
+--   { csv: []
+--   , columnWidth: []
+--   }
 
 
 sepalater :: Pattern
@@ -220,23 +236,23 @@ getKeyName i (PressedKeyInfo pki) = do
   log $ show i
 
 
-derive instance genericCSV :: Generic CSV _
-instance showCSV :: Show CSV where
-  show (CSV {
-    csv: c
-  , columnWidth: cl
-  }) = "{ csv: " <> (show c) <> " ,columnWidth: " <> (show cl) <> " }"
-
-derive instance genericRow :: Generic Row _
-instance showRow :: Show Row where
-  show (Row {
-    row : r
-  , maxHeight : mh
-  }) = "{ row: " <> (show r) <> " ,maxHeight: " <> (show mh) <> " }"
-
-derive instance genericCell :: Generic Cell _
-instance showCell :: Show Cell where
-  show (Cell {
-    text : t
-  , paddingText : pt
-  }) = "{ test: " <> t <> " ,paddingText: " <> pt <> " }"
+-- derive instance genericCSV :: Generic CSV _
+-- instance showCSV :: Show CSV where
+--   show (CSV {
+--     csv: c
+--   , columnWidth: cl
+--   }) = "{ csv: " <> (show c) <> " ,columnWidth: " <> (show cl) <> " }"
+-- 
+-- derive instance genericRow :: Generic Row _
+-- instance showRow :: Show Row where
+--   show (Row {
+--     row : r
+--   , maxHeight : mh
+--   }) = "{ row: " <> (show r) <> " ,maxHeight: " <> (show mh) <> " }"
+-- 
+-- derive instance genericCell :: Generic Cell _
+-- instance showCell :: Show Cell where
+--   show (Cell {
+--     text : t
+--   , paddingText : pt
+--   }) = "{ test: " <> t <> " ,paddingText: " <> pt <> " }"
