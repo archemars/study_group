@@ -8,7 +8,7 @@ import Node.Stream (Readable, Writable)
 import Node.Process (stdin, stdout, argv)
 import Data.Function.Uncurried (Fn1, runFn1, Fn4, runFn4)
 import Data.Generic.Rep (class Generic)
-import Data.Array (replicate, length, head, reverse, filter, snoc)
+import Data.Array (replicate, length, head, reverse, filter, snoc, zip)
 import Data.String (length) as S
 import Data.Traversable (for)
 import Node.FS.Sync(readTextFile)
@@ -17,6 +17,7 @@ import Node.Encoding(Encoding(UTF8))
 import Data.String.Common (split)
 import Data.String.Pattern (Pattern(..))
 import Data.Foldable (foldl)
+import Data.Tuple (Tuple, fst, snd)
 import Effect.Ref as R
 
 import Parser (parse)
@@ -57,15 +58,94 @@ main = do
   onKeypress stdin stdout true (displayTxt screenRow txtRecord srs)
 
   csv <- parse txt "asdf"
-  logShow csv
+  -- logShow initCsv
 
--- TODO つぎここらへん？
-CSV :: CSV
-CSV = CSV
-  { csv:: Array Row
-  , columnWidth:: Array Int
-  , rowHeight:: Array Int
-  }
+  -- logShow csv
+  -- logShow csv
+  -- logShow $ getCsvWidth csv
+  -- logShow $ getCsv csv
+
+  let csv__ = filter (\x -> length x > 0) csv -- TODO filter???
+  let csv_ = { csv : getCsv csv__
+             , columnWidth : getCsvWidth csv__
+             }
+  logShow csv_
+
+  log "tablize"
+  let csvTable = tablize csv_
+  log csvTable
+
+  log ""
+
+-- data TupleRow = Tuple Cell Int
+-- purescriptはtuple使うならrecord使って感じなんですね〜 そしたらzip使いづらいってこと？
+
+
+-- 次は関数分けていこうかな,,,
+tablize :: CSV -> String
+tablize csv_ = 
+    foldl (\v -> \row_ -> csvFold v row_ csv_) "" csv_.csv
+
+
+csvFold :: String -> Row -> CSV -> String
+csvFold v row_ csv_ = (foldl (\y -> \tupleCell -> (makeOutLine ((length row_.row) + (foldl (\v -> \a -> v + (S.length (getPt (fst tupleCell)))) 0 row_.row))) <> "\n" <> ((getPt (fst tupleCell)))) "" (zipRow row_.row csv_.columnWidth))
+
+
+zipRow :: (Array Cell) -> (Array Int) -> Array (Tuple Cell Int)
+zipRow ac i = zip ac i
+
+getPt :: Cell -> String
+getPt c = c.paddingText
+
+makeOutLine :: Int -> String
+makeOutLine i = foldl (\v -> \_ -> v <> "-") "" $ replicate i "-"
+
+getCsv :: Array (Array String) -> Array Row
+getCsv csv = foldl (\val -> \acc -> 
+               val <> [{ row : getRow acc
+                       , maxHeight: foldl (\v -> \a -> max v a) 0 (map (\x -> length (split (Pattern "\n") x)) acc)
+                       }]
+               ) [] csv
+
+getCsvWidth :: Array (Array String) -> Array Int
+getCsvWidth csv = foldl (\val -> \acc -> 
+                    if length acc == 0 then
+                      val
+                    else if length val == 0 then
+                      map S.length acc
+                    else map (\x -> if fst x < snd x then snd x else fst x) (zip val (map S.length acc))) [] csv
+
+getRow :: Array String -> Array Cell
+getRow csv = map (\v -> { text: v
+                        , paddingText: "" <> v <> ""
+                        , maxHeight: 0
+                        }
+                 ) csv
+
+type CSV = { csv :: Array Row , columnWidth :: Array Int }
+-- newtype CSV = CSV
+--   { csv:: Array Row
+--   , columnWidth:: Array Int
+--   }
+
+type Row = { row :: Array Cell , maxHeight :: Int }
+-- newtype Row = Row
+--   { row :: Array Cell
+--   , maxHeight :: Int
+--   }
+
+type Cell = { text :: String , paddingText :: String , maxHeight :: Int }
+-- newtype Cell = Cell
+--   { text :: String
+--   , paddingText :: String
+--   , maxHeight :: Int
+--   }
+
+-- initCsv :: CSV
+-- initCsv = CSV
+--   { csv: []
+--   , columnWidth: []
+--   }
 
 
 sepalater :: Pattern
@@ -156,3 +236,23 @@ getKeyName i (PressedKeyInfo pki) = do
   log $ show i
 
 
+-- derive instance genericCSV :: Generic CSV _
+-- instance showCSV :: Show CSV where
+--   show (CSV {
+--     csv: c
+--   , columnWidth: cl
+--   }) = "{ csv: " <> (show c) <> " ,columnWidth: " <> (show cl) <> " }"
+-- 
+-- derive instance genericRow :: Generic Row _
+-- instance showRow :: Show Row where
+--   show (Row {
+--     row : r
+--   , maxHeight : mh
+--   }) = "{ row: " <> (show r) <> " ,maxHeight: " <> (show mh) <> " }"
+-- 
+-- derive instance genericCell :: Generic Cell _
+-- instance showCell :: Show Cell where
+--   show (Cell {
+--     text : t
+--   , paddingText : pt
+--   }) = "{ test: " <> t <> " ,paddingText: " <> pt <> " }"
