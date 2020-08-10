@@ -81,12 +81,12 @@ main = do
 -- purescriptはtuple使うならrecord使って感じなんですね〜 そしたらzip使いづらいってこと？
 
 
--- 次は関数分けていこうかな,,,
 tablize :: CSV -> String
 tablize csv_ = 
     foldl (\v -> \row_ -> csvFold v row_ csv_) "" csv_.csv
 
 
+-- NEXT TODO : write table outlines
 csvFold :: String -> Row -> CSV -> String
 csvFold v row_ csv_ = (foldl (\y -> \tupleCell -> (makeOutLine ((length row_.row) + (foldl (\v -> \a -> v + (S.length (getPt (fst tupleCell)))) 0 row_.row))) <> "\n" <> ((getPt (fst tupleCell)))) "" (zipRow row_.row csv_.columnWidth))
 
