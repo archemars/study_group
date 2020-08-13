@@ -67,7 +67,7 @@ main = do
 
   let csv__ = filter (\x -> length x > 0) csv -- TODO filter???
   let csv_ = { csv : getCsv csv__
-             , columnWidth : getCsvWidth csv__
+             , columnWidth : getCsvWidth csv__ -- TODO multiByte
              }
   logShow csv_
 
