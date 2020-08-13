@@ -9,7 +9,7 @@ import Node.Process (stdin, stdout, argv)
 import Data.Function.Uncurried (Fn1, runFn1, Fn4, runFn4)
 import Data.Generic.Rep (class Generic)
 import Data.Array (replicate, length, head, reverse, filter, snoc, zip)
-import Data.String (length) as S
+import Data.String (length, joinWith) as S
 import Data.Traversable (for)
 import Node.FS.Sync(readTextFile)
 import Data.Maybe (Maybe(Just, Nothing))
@@ -88,17 +88,19 @@ tablize csv_ =
 
 -- NEXT TODO : write table outlines
 csvFold :: String -> Row -> CSV -> String
-csvFold v row_ csv_ = (foldl (\y -> \tupleCell -> (makeOutLine ((length row_.row) + (foldl (\v -> \a -> v + (S.length (getPt (fst tupleCell)))) 0 row_.row))) <> "\n" <> ((getPt (fst tupleCell)))) "" (zipRow row_.row csv_.columnWidth))
-
+csvFold vv row_ csv_ = vv <> "\n" <> makeRow (foldl (\y -> \tupleCell -> {fst: y.fst <> (makeOutLine (snd (tupleCell) + 2)), snd: y.snd <> ((getPt (fst tupleCell) (snd (tupleCell) + 2)))}) {fst: "", snd: ""} (zipRow row_.row csv_.columnWidth))
+-- (makeOutLine ((length row_.row) + (foldl (\v -> \a -> v + (S.length (getPt (fst tupleCell)))) 0 row_.row)))
 
 zipRow :: (Array Cell) -> (Array Int) -> Array (Tuple Cell Int)
 zipRow ac i = zip ac i
 
-getPt :: Cell -> String
-getPt c = c.paddingText
+getPt :: Cell -> Int -> String
+getPt c i = "|" <> c.paddingText <> S.joinWith ""  (replicate ((i - S.length c.paddingText)) " ")
 
 makeOutLine :: Int -> String
-makeOutLine i = foldl (\v -> \_ -> v <> "-") "" $ replicate i "-"
+makeOutLine i = "+" <> (foldl (\v -> \_ -> v <> "-") "" $ replicate i "-")
+
+makeRow r = r.fst <> "\n" <> r.snd
 
 getCsv :: Array (Array String) -> Array Row
 getCsv csv = foldl (\val -> \acc -> 
@@ -117,7 +119,7 @@ getCsvWidth csv = foldl (\val -> \acc ->
 
 getRow :: Array String -> Array Cell
 getRow csv = map (\v -> { text: v
-                        , paddingText: "" <> v <> ""
+                        , paddingText: " " <> v <> " "
                         , maxHeight: 0
                         }
                  ) csv
