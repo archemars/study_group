@@ -13,7 +13,7 @@ import Data.String (length, joinWith) as S
 import Data.Traversable (for)
 import Node.FS.Sync(readTextFile)
 import Data.Maybe (Maybe(Just, Nothing))
-import Node.Encoding(Encoding(UTF8))
+import Node.Encoding(Encoding(UTF8), byteLength)
 import Data.String.Common (split)
 import Data.String.Pattern (Pattern(..))
 import Data.Foldable (foldl)
@@ -38,7 +38,7 @@ onResize = runFn1 onResizeImpl
 main :: Effect Unit
 main = do
   let screenCol = getColumns
-  let screenRow = getRows/2
+  let screenRow = getRows -- /2
 
   onResize showSize
   args <- argv
@@ -55,7 +55,6 @@ main = do
   let txtRecord = createTextRecord txt
   let startRow = 0
   srs <- R.new 0
-  onKeypress stdin stdout true (displayTxt screenRow txtRecord srs)
 
   csv <- parse txt "asdf"
   -- logShow initCsv
@@ -73,8 +72,11 @@ main = do
 
   log "tablize"
   let csvTable = tablize csv_
-  log csvTable
+  -- log csvTable
 
+  let txtRecordhoge = createTextRecord csvTable
+  onKeypress stdin stdout true (displayTxt screenRow txtRecordhoge srs)
+  -- onKeypress stdin stdout true (displayTxt screenRow txtRecord srs)
   log ""
 
 -- data TupleRow = Tuple Cell Int
@@ -83,24 +85,31 @@ main = do
 
 tablize :: CSV -> String
 tablize csv_ = 
-    foldl (\v -> \row_ -> csvFold v row_ csv_) "" csv_.csv
+    table <> "\n" <> bottom
+    where
+          table = foldl (\v -> \row_ -> csvFold v row_ csv_) "" csv_.csv
+          bottom = case head $ filter (\r -> S.length r > 0) $ split (Pattern "\n") table of -- TODO filter???
+                        Just h -> h
+                        Nothing -> ""
 
 
 -- NEXT TODO : write table outlines
 csvFold :: String -> Row -> CSV -> String
-csvFold vv row_ csv_ = vv <> "\n" <> makeRow (foldl (\y -> \tupleCell -> {fst: y.fst <> (makeOutLine (snd (tupleCell) + 2)), snd: y.snd <> ((getPt (fst tupleCell) (snd (tupleCell) + 2)))}) {fst: "", snd: ""} (zipRow row_.row csv_.columnWidth))
+csvFold vv row_ csv_ = vv <> "\n" <> makeRow (foldl (\y -> \tupleCell -> {fst: y.fst <> (makeOutLine (snd (tupleCell) + 2)), snd: y.snd <> ((getPt (fst tupleCell) (snd (tupleCell) + 2)))}) {fst: "", snd: ""} (zipRow row_.row csv_.columnWidth)) <> "|"
 -- (makeOutLine ((length row_.row) + (foldl (\v -> \a -> v + (S.length (getPt (fst tupleCell)))) 0 row_.row)))
 
 zipRow :: (Array Cell) -> (Array Int) -> Array (Tuple Cell Int)
 zipRow ac i = zip ac i
 
 getPt :: Cell -> Int -> String
-getPt c i = "|" <> c.paddingText <> S.joinWith ""  (replicate ((i - S.length c.paddingText)) " ")
+getPt c i = "|" <> c.paddingText <> S.joinWith ""  (replicate ((i - getByteLength c.paddingText)) " ")
+
+getByteLength t = foldl (\x -> \y -> x + (if byteLength y UTF8 == 1 then 1 else 2)) 0 $ split (Pattern "") t
 
 makeOutLine :: Int -> String
 makeOutLine i = "+" <> (foldl (\v -> \_ -> v <> "-") "" $ replicate i "-")
 
-makeRow r = r.fst <> "\n" <> r.snd
+makeRow r = r.fst <> "+\n" <> r.snd
 
 getCsv :: Array (Array String) -> Array Row
 getCsv csv = foldl (\val -> \acc -> 
@@ -114,8 +123,11 @@ getCsvWidth csv = foldl (\val -> \acc ->
                     if length acc == 0 then
                       val
                     else if length val == 0 then
-                      map S.length acc
-                    else map (\x -> if fst x < snd x then snd x else fst x) (zip val (map S.length acc))) [] csv
+                      map (\str -> foldl (\x -> \y -> x + (if byteLength y UTF8 == 1 then 1 else 2)) 0 $ split (Pattern "") str) acc
+                      -- map (\x -> if byteLength x UTF8 == 1 then 1 else 2) $ split (Pattern "") acc
+                      -- map S.length acc
+                    else map (\x -> if fst x < snd x then snd x else fst x) (zip val (map (\str -> foldl (\x -> \y -> x + (if byteLength y UTF8 == 1 then 1 else 2)) 0 $ split (Pattern "") str) acc))) [] csv
+                    -- else map (\x -> if fst x < snd x then snd x else fst x) (zip val (map S.length acc))) [] csv
 
 getRow :: Array String -> Array Cell
 getRow csv = map (\v -> { text: v
@@ -170,6 +182,24 @@ showTxtRecord t = do
   -- bottom line
   log $ "+ " <> (foldl (\x -> \_ -> x <> "-") "" $ replicate (((S.length firstRow) * 2) - 2) "-") <> " +"
 
+showTxtRecord2 :: Array TxtRecord -> Effect Unit
+showTxtRecord2 t = do
+  let firstRow = case head t of
+              Just h -> h.char
+              Nothing -> ""
+
+  -- top line
+  -- log $ "+ " <> (foldl (\x -> \_ -> x <> "-") "" $ replicate (((S.length firstRow) * 2) - 2) "-") <> " +"
+  a <- for t \x -> do
+     let columns = split sepalater x.char
+     let rowLength = S.length x.char + length columns
+     -- log $ "+ " <> (foldl (\x -> \_ -> x <> "-") "" $ replicate ((S.length x.char * 2) - 2) "-") <> " +"
+     log $ (foldl (\x -> \y -> if x == "" then y else x <> y) "" columns)
+
+  log ""
+  -- bottom line
+  -- log $ "+ " <> (foldl (\x -> \_ -> x <> "-") "" $ replicate (((S.length firstRow) * 2) - 2) "-") <> " +"
+
 type TxtRecord = {row:: Int, char:: String}
 initTxtRecord :: Array TxtRecord
 initTxtRecord = []
@@ -196,7 +226,9 @@ displayTxt screenRow txtReords srs (PressedKeyInfo pki) = do
        _   -> R.modify_ (\s -> s) srs
   newStartRow  <- R.read srs
   let displayTxt = filter (\x -> newStartRow < x.row && x.row < (newStartRow + screenRow)) txtReords
-  showTxtRecord displayTxt
+
+  -- showTxtRecord displayTxt
+  showTxtRecord2 displayTxt
 
 
 showSize :: Int -> Int -> Effect Unit
