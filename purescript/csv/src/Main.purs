@@ -162,16 +162,24 @@ displayTxt screenRow txtReords srs (PressedKeyInfo pki) = do
        "j" -> "down"
        "k" -> "up"
        "l" -> "right"
+       "f" -> "forward"
+       "b" -> "back"
        _   -> pki.name
   case name of
-       "down" -> R.modify_ (\s -> if (s + screenRow) > (length txtReords) then s else s + 1) srs
        "up" -> R.modify_ (\s -> if s < 1 then s else s - 1) srs
+       "down" -> R.modify_ (\s -> if (s + screenRow) > (length txtReords) then s else s + 1) srs
+       "back" -> R.modify_ (\s -> if s - screenRow < 1 then 0 else if s < 1 then s else s - screenRow) srs
+       "forward" -> R.modify_ (\s -> if (s + screenRow) > (length txtReords) then s else s + screenRow) srs -- todo over
        _   -> R.modify_ (\s -> s) srs
   newStartRow  <- R.read srs
   let dtxt = filter (\x -> newStartRow < x.row && x.row < (newStartRow + screenRow)) txtReords
 
   showTxtRecord dtxt
 
+
+-- next
+-- g top
+-- G end
 
 showSize :: Int -> Int -> Effect Unit
 showSize col row = do
