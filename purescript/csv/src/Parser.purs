@@ -29,7 +29,7 @@ regexFlag = RegexFlags
 
 convertToCrlf :: String -> String
 convertToCrlf s = case regex "\r\n|\r|\n" regexFlag of
-                    Left r -> "errrrrr"
+                    Left r -> "error"
                     Right r -> replace r "\n" s
 
 initValue :: Array (Array String)
@@ -122,8 +122,7 @@ fuga csv char raq riqc rrteq = do
   let _csv_ = if char == "\"" then
                 addChar csv_ row str char
               else
-                -- if char == delimiterChar then TODO
-                if char == "," then
+                if char == "," then -- "," is delimiter char
                     addCell csv_ (row <> []) ""
                 else if char == "\n" then
                     addRow csv []
