@@ -63,17 +63,17 @@ addRow :: Array (Array String) -> Array String -> Array (Array String)
 addRow csv row = csv <> [row]
 
 readChar2 :: ParseParam -> String -> ParseParam
-readChar2 csv char = if iqc == false then
-                                   baz2 csv char raq riqc rrteq
-                                 else if char == "\"" && aq == true && iqc == true then
+readChar2 csv char = if csv.iqc == false then
+                                   baz2 csv char
+                                 else if char == "\"" && csv.aq == true && csv.iqc == true then
                                    hoge2 csv char raq riqc rrteq
-                                 else if aq == true && iqc == true && rteq == true then
+                                 else if csv.aq == true && csv.iqc == true && csv.rteq == true then
                                    fuga2 csv char raq riqc rrteq
-                                 else if aq == true && iqc == true && rteq == false then
+                                 else if csv.aq == true && csv.iqc == true && csv.rteq == false then
                                    piyo2 csv char raq riqc rrteq
-                                 else if char == "\"" && aq == false && iqc == true then
+                                 else if char == "\"" && csv.aq == false && csv.iqc == true then
                                    foo2 csv char raq riqc rrteq
-                                 else if aq == false && iqc == true then
+                                 else if csv.aq == false && csv.iqc == true then
                                    foofoo2 csv char raq riqc rrteq
                                  else
                                    []
@@ -334,35 +334,36 @@ foofoo2 csv char raq riqc rrteq = do
               Nothing -> ""
   pure $ addChar csv_ row str char
 
-baz2 :: Array (Array String) -> String -> Ref AfterQuote -> Ref InsideQuoteCell -> Ref ReadyToEndQuote -> Effect (Array (Array String))
-baz2 csv char raq riqc rrteq = do
-  let csv_ = case init csv of
+baz2 :: ParseParam -> String -> ParseParam
+baz2 pp char = { csv: csv
+               , aq: pp.aq
+               , iqc: iqc
+               , rteq: pp.rteq
+               }
+    where
+          initCsv = case init pp.csv of
                Just x -> x
                Nothing -> []
-  let lastRow = case last csv of
-              Just x -> x
-              Nothing -> []
-  let row = case init lastRow of
-              Just x -> x
-              Nothing -> []
-  let str = case last lastRow of
-              Just x -> x
-              Nothing -> ""
-  let _csv_ =
-              if char == "," then
-                addCell csv_ (row <> []) str
-              else if char == "\n" then
-                addRow (addCell csv_ row str) row
-              else if char == "\"" then
-                csv
-              else
-                addChar csv_ row "" (str <> char)
+          lastRow = case last pp.csv of
+                  Just x -> x
+                  Nothing -> []
+          row = case init lastRow of
+                  Just x -> x
+                  Nothing -> []
+          str = case last lastRow of
+                  Just x -> x
+                  Nothing -> ""
+          csv = if char == "," then
+                  addCell initCsv (row <> []) str
+                else if char == "\n" then
+                  addRow (addCell initCsv row str) row
+                else if char == "\"" then
+                  pp.initCsv
+                else
+                  addChar initCsv row "" (str <> char)
+          iqc = if char == "\"" then
+                  modify_ (\s -> true) csv.iqc
+                else 
+                  modify_ (\s -> iqc) csv.iqc
 
-  iqc <- read riqc
-  if char == "\"" then
-    modify_ (\s -> true) riqc
-  else 
-    modify_ (\s -> iqc) riqc
-
-  pure _csv_
 
