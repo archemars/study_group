@@ -45,13 +45,13 @@ initValue2 = { csv: []
 
 parse :: String -> Delimiter -> Effect (Array (Array String))
 parse s d = do
-  raq <- new false
-  riqc <- new false
-  rrteq <- new false
+  -- raq <- new false
+  -- riqc <- new false
+  -- rrteq <- new false
 
   -- foldl (\val -> \char -> readChar val char raq riqc rrteq) (pure initValue) (split (Pattern "") (convertToCrlf s))
   let csv = foldl (\val -> \char -> readChar2 val char) initValue2 (split (Pattern "") (convertToCrlf s))
-  pure csv
+  pure csv.csv
 
 addChar :: Array (Array String) -> Array String -> String -> String -> Array (Array String)
 addChar csv row str char = csv <> [row <> [str <> char]]
@@ -64,43 +64,43 @@ addRow csv row = csv <> [row]
 
 readChar2 :: ParseParam -> String -> ParseParam
 readChar2 csv char = if csv.iqc == false then
-                                   baz2 csv char
-                                 else if char == "\"" && csv.aq == true && csv.iqc == true then
-                                   hoge2 csv char raq riqc rrteq
-                                 else if csv.aq == true && csv.iqc == true && csv.rteq == true then
-                                   fuga2 csv char raq riqc rrteq
-                                 else if csv.aq == true && csv.iqc == true && csv.rteq == false then
-                                   piyo2 csv char raq riqc rrteq
-                                 else if char == "\"" && csv.aq == false && csv.iqc == true then
-                                   foo2 csv char raq riqc rrteq
-                                 else if csv.aq == false && csv.iqc == true then
-                                   foofoo2 csv char raq riqc rrteq
-                                 else
-                                   []
+                       baz2 csv char
+                     else if char == "\"" && csv.aq == true && csv.iqc == true then
+                       hoge2 csv char
+                     else if csv.aq == true && csv.iqc == true && csv.rteq == true then
+                       fuga2 csv char
+                     else if csv.aq == true && csv.iqc == true && csv.rteq == false then
+                       piyo2 csv char
+                     else if char == "\"" && csv.aq == false && csv.iqc == true then
+                       foo2 csv char
+                     else if csv.aq == false && csv.iqc == true then
+                       foofoo2 csv char
+                     else
+                       initValue2
 
-readChar :: Effect (Array (Array String)) -> String -> Ref AfterQuote -> Ref InsideQuoteCell -> Ref ReadyToEndQuote -> Effect (Array (Array String))
-readChar _csv char raq riqc rrteq = do
-  csv   <- _csv
-  aq   <- read raq
-  iqc  <- read riqc
-  rteq <- read rrteq
-
-  csv_ <- if iqc == false then
-            baz csv char raq riqc rrteq
-          else if char == "\"" && aq == true && iqc == true then
-            hoge csv char raq riqc rrteq
-          else if aq == true && iqc == true && rteq == true then
-            fuga csv char raq riqc rrteq
-          else if aq == true && iqc == true && rteq == false then
-            piyo csv char raq riqc rrteq
-          else if char == "\"" && aq == false && iqc == true then
-            foo csv char raq riqc rrteq
-          else if aq == false && iqc == true then
-            foofoo csv char raq riqc rrteq
-          else
-            pure []
-
-  pure csv_
+-- readChar :: Effect (Array (Array String)) -> String -> Ref AfterQuote -> Ref InsideQuoteCell -> Ref ReadyToEndQuote -> Effect (Array (Array String))
+-- readChar _csv char raq riqc rrteq = do
+--   csv   <- _csv
+--   aq   <- read raq
+--   iqc  <- read riqc
+--   rteq <- read rrteq
+-- 
+--   csv_ <- if iqc == false then
+--             baz csv char raq riqc rrteq
+--           else if char == "\"" && aq == true && iqc == true then
+--             hoge csv char raq riqc rrteq
+--           else if aq == true && iqc == true && rteq == true then
+--             fuga csv char raq riqc rrteq
+--           else if aq == true && iqc == true && rteq == false then
+--             piyo csv char raq riqc rrteq
+--           else if char == "\"" && aq == false && iqc == true then
+--             foo csv char raq riqc rrteq
+--           else if aq == false && iqc == true then
+--             foofoo csv char raq riqc rrteq
+--           else
+--             pure []
+-- 
+--   pure csv_
 
   -- XXX TODO ↓のパターンを↑のifに入れる
 
@@ -238,101 +238,101 @@ baz csv char raq riqc rrteq = do
 
 
 
-
-
-
-
-hoge2 :: Array (Array String) -> String -> Ref AfterQuote -> Ref InsideQuoteCell -> Ref ReadyToEndQuote -> Effect (Array (Array String))
-hoge2 csv char raq riqc rrteq = do
-  modify_ (\s -> false) raq
-  modify_ (\s -> false) rrteq
-
-  let csv_ = case init csv of
+hoge2 :: ParseParam -> String -> ParseParam
+hoge2 pp char = { csv: addChar initCsv row str char
+                , aq: false
+                , iqc: pp.iqc
+                , rteq: false
+                }
+      where
+          initCsv = case init pp.csv of
                Just x -> x
                Nothing -> []
-  let lastRow = case last csv of
-              Just x -> x
-              Nothing -> []
-  let row = case init lastRow of
-              Just x -> x
-              Nothing -> []
-  let str = case last lastRow of
-              Just x -> x
-              Nothing -> ""
-  pure $ addChar csv_ row str char
+          lastRow = case last pp.csv of
+                  Just x -> x
+                  Nothing -> []
+          row = case init lastRow of
+                  Just x -> x
+                  Nothing -> []
+          str = case last lastRow of
+                  Just x -> x
+                  Nothing -> ""
 
-fuga2 :: Array (Array String) -> String -> Ref AfterQuote -> Ref InsideQuoteCell -> Ref ReadyToEndQuote -> Effect (Array (Array String))
-fuga2 csv char raq riqc rrteq = do
-  let csv_ = case init csv of
+fuga2 :: ParseParam -> String -> ParseParam
+fuga2 pp char = { csv: resCsv
+                , aq: false
+                , iqc: if char /= "\"" then false else pp.iqc
+                , rteq: false
+                }
+      where
+          initCsv = case init pp.csv of
                Just x -> x
                Nothing -> []
-  let row = case last csv of
-              Just x -> x
-              Nothing -> []
-  let str = case last row of
-              Just x -> x
-              Nothing -> ""
-  aq   <- read raq
+          lastRow = case last pp.csv of
+                  Just x -> x
+                  Nothing -> []
+          row = case init lastRow of
+                  Just x -> x
+                  Nothing -> []
+          str = case last lastRow of
+                  Just x -> x
+                  Nothing -> ""
+          resCsv = if char == "\"" then
+                        addChar initCsv lastRow str char
+                      else
+                        if char == "," then -- "," is delimiter char
+                            addCell initCsv (lastRow <> []) ""
+                        else if char == "\n" then
+                            addRow pp.csv []
+                        else
+                            pp.csv
 
-  modify_ (\s -> false) rrteq
-  modify_ (\s -> false) raq
-
-  iqc  <- read riqc
-  if char /= "\"" then
-    modify_ (\s -> false) riqc
-  else
-    modify_ (\s -> iqc) riqc
-
-  let _csv_ = if char == "\"" then
-                addChar csv_ row str char
-              else
-                if char == "," then -- "," is delimiter char
-                    addCell csv_ (row <> []) ""
-                else if char == "\n" then
-                    addRow csv []
-                else
-                    csv
-  pure _csv_
-
-piyo2 :: Array (Array String) -> String -> Ref AfterQuote -> Ref InsideQuoteCell -> Ref ReadyToEndQuote -> Effect (Array (Array String))
-piyo2 csv char raq riqc rrteq = do
-  modify_ (\s -> false) raq
-  modify_ (\s -> false) rrteq
-
-  let csv_ = case init csv of
+piyo2 :: ParseParam -> String -> ParseParam
+piyo2 pp char = { csv: addChar initCsv row str char
+                , aq: false
+                , iqc: pp.iqc
+                , rteq: false
+                }
+      where
+          initCsv = case init pp.csv of
                Just x -> x
                Nothing -> []
-  let lastRow = case last csv of
+          lastRow = case last pp.csv of
+                  Just x -> x
+                  Nothing -> []
+          row = case init lastRow of
+                  Just x -> x
+                  Nothing -> []
+          str = case last lastRow of
+                  Just x -> x
+                  Nothing -> ""
+
+foo2 :: ParseParam -> String -> ParseParam
+foo2 pp char = { csv: pp.csv
+                , aq: true
+                , iqc: pp.iqc
+                , rteq: true
+                }
+
+foofoo2 :: ParseParam -> String -> ParseParam
+foofoo2 pp char = { csv: addChar initCsv row str char
+                , aq: pp.aq
+                , iqc: pp.iqc
+                , rteq: pp.rteq
+                }
+  where
+      initCsv = case init pp.csv of
+           Just x -> x
+           Nothing -> []
+      lastRow = case last pp.csv of
               Just x -> x
               Nothing -> []
-  let row = case init lastRow of
+      row = case init lastRow of
               Just x -> x
               Nothing -> []
-  let str = case last lastRow of
+      str = case last lastRow of
               Just x -> x
               Nothing -> ""
-  pure $ addChar csv_ row str char
-
-foo2 :: Array (Array String) -> String -> Ref AfterQuote -> Ref InsideQuoteCell -> Ref ReadyToEndQuote -> Effect (Array (Array String))
-foo2 csv char raq riqc rrteq = do
-  modify_ (\s -> true) raq
-  modify_ (\s -> true) rrteq
-  pure csv
-
-foofoo2 csv char raq riqc rrteq = do
-  let csv_ = case init csv of
-               Just x -> x
-               Nothing -> []
-  let lastRow = case last csv of
-              Just x -> x
-              Nothing -> []
-  let row = case init lastRow of
-              Just x -> x
-              Nothing -> []
-  let str = case last lastRow of
-              Just x -> x
-              Nothing -> ""
-  pure $ addChar csv_ row str char
 
 baz2 :: ParseParam -> String -> ParseParam
 baz2 pp char = { csv: csv
@@ -358,12 +358,12 @@ baz2 pp char = { csv: csv
                 else if char == "\n" then
                   addRow (addCell initCsv row str) row
                 else if char == "\"" then
-                  pp.initCsv
+                  pp.csv
                 else
                   addChar initCsv row "" (str <> char)
           iqc = if char == "\"" then
-                  modify_ (\s -> true) csv.iqc
+                  true
                 else 
-                  modify_ (\s -> iqc) csv.iqc
+                  pp.iqc
 
 
