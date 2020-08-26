@@ -11,7 +11,6 @@ import Data.String.Regex (regex, replace)
 import Data.String.Regex.Flags (RegexFlags(..))
 import Data.Foldable (foldl)
 import Data.Either (Either(..))
-import Effect.Ref (Ref, new, modify_, read)
 
 type Delimiter = String
 type AfterQuote = Boolean
@@ -32,9 +31,6 @@ convertToCrlf s = case regex "\r\n|\r|\n" regexFlag of
                     Left r -> "error"
                     Right r -> replace r "\n" s
 
-initValue :: Array (Array String)
-initValue = []
-
 type ParseParam = { csv :: Array (Array String) , aq :: Boolean,  iqc :: Boolean, rteq :: Boolean }
 initValue2 :: ParseParam
 initValue2 = { csv: []
@@ -45,11 +41,6 @@ initValue2 = { csv: []
 
 parse :: String -> Delimiter -> Effect (Array (Array String))
 parse s d = do
-  -- raq <- new false
-  -- riqc <- new false
-  -- rrteq <- new false
-
-  -- foldl (\val -> \char -> readChar val char raq riqc rrteq) (pure initValue) (split (Pattern "") (convertToCrlf s))
   let csv = foldl (\val -> \char -> readChar2 val char) initValue2 (split (Pattern "") (convertToCrlf s))
   pure csv.csv
 
@@ -77,164 +68,6 @@ readChar2 csv char = if csv.iqc == false then
                        foofoo2 csv char
                      else
                        initValue2
-
--- readChar :: Effect (Array (Array String)) -> String -> Ref AfterQuote -> Ref InsideQuoteCell -> Ref ReadyToEndQuote -> Effect (Array (Array String))
--- readChar _csv char raq riqc rrteq = do
---   csv   <- _csv
---   aq   <- read raq
---   iqc  <- read riqc
---   rteq <- read rrteq
--- 
---   csv_ <- if iqc == false then
---             baz csv char raq riqc rrteq
---           else if char == "\"" && aq == true && iqc == true then
---             hoge csv char raq riqc rrteq
---           else if aq == true && iqc == true && rteq == true then
---             fuga csv char raq riqc rrteq
---           else if aq == true && iqc == true && rteq == false then
---             piyo csv char raq riqc rrteq
---           else if char == "\"" && aq == false && iqc == true then
---             foo csv char raq riqc rrteq
---           else if aq == false && iqc == true then
---             foofoo csv char raq riqc rrteq
---           else
---             pure []
--- 
---   pure csv_
-
-  -- XXX TODO ↓のパターンを↑のifに入れる
-
-hoge :: Array (Array String) -> String -> Ref AfterQuote -> Ref InsideQuoteCell -> Ref ReadyToEndQuote -> Effect (Array (Array String))
-hoge csv char raq riqc rrteq = do
-  modify_ (\s -> false) raq
-  modify_ (\s -> false) rrteq
-
-  let csv_ = case init csv of
-               Just x -> x
-               Nothing -> []
-  let lastRow = case last csv of
-              Just x -> x
-              Nothing -> []
-  let row = case init lastRow of
-              Just x -> x
-              Nothing -> []
-  let str = case last lastRow of
-              Just x -> x
-              Nothing -> ""
-  pure $ addChar csv_ row str char
-
-fuga :: Array (Array String) -> String -> Ref AfterQuote -> Ref InsideQuoteCell -> Ref ReadyToEndQuote -> Effect (Array (Array String))
-fuga csv char raq riqc rrteq = do
-  let csv_ = case init csv of
-               Just x -> x
-               Nothing -> []
-  let row = case last csv of
-              Just x -> x
-              Nothing -> []
-  let str = case last row of
-              Just x -> x
-              Nothing -> ""
-  aq   <- read raq
-
-  modify_ (\s -> false) rrteq
-  modify_ (\s -> false) raq
-
-  iqc  <- read riqc
-  if char /= "\"" then
-    modify_ (\s -> false) riqc
-  else
-    modify_ (\s -> iqc) riqc
-
-  let _csv_ = if char == "\"" then
-                addChar csv_ row str char
-              else
-                if char == "," then -- "," is delimiter char
-                    addCell csv_ (row <> []) ""
-                else if char == "\n" then
-                    addRow csv []
-                else
-                    csv
-  pure _csv_
-
-piyo :: Array (Array String) -> String -> Ref AfterQuote -> Ref InsideQuoteCell -> Ref ReadyToEndQuote -> Effect (Array (Array String))
-piyo csv char raq riqc rrteq = do
-  modify_ (\s -> false) raq
-  modify_ (\s -> false) rrteq
-
-  let csv_ = case init csv of
-               Just x -> x
-               Nothing -> []
-  let lastRow = case last csv of
-              Just x -> x
-              Nothing -> []
-  let row = case init lastRow of
-              Just x -> x
-              Nothing -> []
-  let str = case last lastRow of
-              Just x -> x
-              Nothing -> ""
-  pure $ addChar csv_ row str char
-
-foo :: Array (Array String) -> String -> Ref AfterQuote -> Ref InsideQuoteCell -> Ref ReadyToEndQuote -> Effect (Array (Array String))
-foo csv char raq riqc rrteq = do
-  modify_ (\s -> true) raq
-  modify_ (\s -> true) rrteq
-  pure csv
-
-foofoo csv char raq riqc rrteq = do
-  let csv_ = case init csv of
-               Just x -> x
-               Nothing -> []
-  let lastRow = case last csv of
-              Just x -> x
-              Nothing -> []
-  let row = case init lastRow of
-              Just x -> x
-              Nothing -> []
-  let str = case last lastRow of
-              Just x -> x
-              Nothing -> ""
-  pure $ addChar csv_ row str char
-
-baz :: Array (Array String) -> String -> Ref AfterQuote -> Ref InsideQuoteCell -> Ref ReadyToEndQuote -> Effect (Array (Array String))
-baz csv char raq riqc rrteq = do
-  let csv_ = case init csv of
-               Just x -> x
-               Nothing -> []
-  let lastRow = case last csv of
-              Just x -> x
-              Nothing -> []
-  let row = case init lastRow of
-              Just x -> x
-              Nothing -> []
-  let str = case last lastRow of
-              Just x -> x
-              Nothing -> ""
-  let _csv_ =
-              if char == "," then
-                addCell csv_ (row <> []) str
-              else if char == "\n" then
-                addRow (addCell csv_ row str) row
-              else if char == "\"" then
-                csv
-              else
-                addChar csv_ row "" (str <> char)
-
-  iqc <- read riqc
-  if char == "\"" then
-    modify_ (\s -> true) riqc
-  else 
-    modify_ (\s -> iqc) riqc
-
-  pure _csv_
-
-
-
-
-
-
-
-
 
 
 
