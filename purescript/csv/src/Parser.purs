@@ -32,8 +32,8 @@ convertToCrlf s = case regex "\r\n|\r|\n" regexFlag of
                     Right r -> replace r "\n" s
 
 type ParseParam = { csv :: Array (Array String) , aq :: Boolean,  iqc :: Boolean, rteq :: Boolean }
-initValue2 :: ParseParam
-initValue2 = { csv: []
+initValue :: ParseParam
+initValue = { csv: []
              , aq: false
              , iqc: false
              , rteq: false 
@@ -41,7 +41,7 @@ initValue2 = { csv: []
 
 parse :: String -> Delimiter -> Effect (Array (Array String))
 parse s d = do
-  let csv = foldl (\val -> \char -> readChar2 val char) initValue2 (split (Pattern "") (convertToCrlf s))
+  let csv = foldl (\val -> \char -> readChar val char) initValue (split (Pattern "") (convertToCrlf s))
   pure csv.csv
 
 addChar :: Array (Array String) -> Array String -> String -> String -> Array (Array String)
@@ -53,150 +53,85 @@ addCell csv row cell = csv <> [row <> [cell]]
 addRow :: Array (Array String) -> Array String -> Array (Array String)
 addRow csv row = csv <> [row]
 
-readChar2 :: ParseParam -> String -> ParseParam
-readChar2 csv char = if csv.iqc == false then
-                       baz2 csv char
-                     else if char == "\"" && csv.aq == true && csv.iqc == true then
-                       hoge2 csv char
-                     else if csv.aq == true && csv.iqc == true && csv.rteq == true then
-                       fuga2 csv char
-                     else if csv.aq == true && csv.iqc == true && csv.rteq == false then
-                       piyo2 csv char
-                     else if char == "\"" && csv.aq == false && csv.iqc == true then
-                       foo2 csv char
-                     else if csv.aq == false && csv.iqc == true then
-                       foofoo2 csv char
-                     else
-                       initValue2
+getInitCsv :: Array (Array String) -> Array (Array String)
+getInitCsv csv = case init csv of
+                Just x -> x
+                Nothing -> []
 
+getLastRow :: Array (Array String) -> Array String
+getLastRow csv = case last csv of
+                   Just x -> x
+                   Nothing -> []
 
+getRow :: Array String -> Array String
+getRow lastRow = case init lastRow of
+                   Just x -> x
+                   Nothing -> []
 
-hoge2 :: ParseParam -> String -> ParseParam
-hoge2 pp char = { csv: addChar initCsv row str char
-                , aq: false
-                , iqc: pp.iqc
-                , rteq: false
-                }
-      where
-          initCsv = case init pp.csv of
-               Just x -> x
-               Nothing -> []
-          lastRow = case last pp.csv of
-                  Just x -> x
-                  Nothing -> []
-          row = case init lastRow of
-                  Just x -> x
-                  Nothing -> []
-          str = case last lastRow of
-                  Just x -> x
-                  Nothing -> ""
+getStr :: Array String -> String
+getStr lastRow = case last lastRow of
+                   Just x -> x
+                   Nothing -> ""
 
-fuga2 :: ParseParam -> String -> ParseParam
-fuga2 pp char = { csv: resCsv
-                , aq: false
-                , iqc: if char /= "\"" then false else pp.iqc
-                , rteq: false
-                }
-      where
-          initCsv = case init pp.csv of
-               Just x -> x
-               Nothing -> []
-          lastRow = case last pp.csv of
-                  Just x -> x
-                  Nothing -> []
-          row = case init lastRow of
-                  Just x -> x
-                  Nothing -> []
-          str = case last lastRow of
-                  Just x -> x
-                  Nothing -> ""
-          resCsv = if char == "\"" then
-                        addChar initCsv lastRow str char
-                      else
-                        if char == "," then -- "," is delimiter char
-                            addCell initCsv (lastRow <> []) ""
-                        else if char == "\n" then
-                            addRow pp.csv []
-                        else
-                            pp.csv
-
-piyo2 :: ParseParam -> String -> ParseParam
-piyo2 pp char = { csv: addChar initCsv row str char
-                , aq: false
-                , iqc: pp.iqc
-                , rteq: false
-                }
-      where
-          initCsv = case init pp.csv of
-               Just x -> x
-               Nothing -> []
-          lastRow = case last pp.csv of
-                  Just x -> x
-                  Nothing -> []
-          row = case init lastRow of
-                  Just x -> x
-                  Nothing -> []
-          str = case last lastRow of
-                  Just x -> x
-                  Nothing -> ""
-
-foo2 :: ParseParam -> String -> ParseParam
-foo2 pp char = { csv: pp.csv
-                , aq: true
-                , iqc: pp.iqc
-                , rteq: true
-                }
-
-foofoo2 :: ParseParam -> String -> ParseParam
-foofoo2 pp char = { csv: addChar initCsv row str char
-                , aq: pp.aq
-                , iqc: pp.iqc
-                , rteq: pp.rteq
-                }
+readChar :: ParseParam -> String -> ParseParam
+readChar pp char = if pp.iqc == false then
+                     { csv: csv
+                     , aq: pp.aq
+                     , iqc: if char == "\"" then true else pp.iqc
+                     , rteq: pp.rteq
+                     }
+                   else if char == "\"" && pp.aq == true && pp.iqc == true then
+                     { csv: addChar initCsv row str char
+                     , aq: false
+                     , iqc: pp.iqc
+                     , rteq: false
+                     }
+                   else if pp.aq == true && pp.iqc == true && pp.rteq == true then
+                     { csv: resCsv
+                     , aq: false
+                     , iqc: if char /= "\"" then false else pp.iqc
+                     , rteq: false
+                     }
+                   else if pp.aq == true && pp.iqc == true && pp.rteq == false then
+                     { csv: addChar initCsv row str char
+                     , aq: false
+                     , iqc: pp.iqc
+                     , rteq: false
+                     }
+                   else if char == "\"" && pp.aq == false && pp.iqc == true then
+                     { csv: pp.csv
+                     , aq: true
+                     , iqc: pp.iqc
+                     , rteq: true
+                     }
+                   else if pp.aq == false && pp.iqc == true then
+                     { csv: addChar initCsv row str char
+                     , aq: pp.aq
+                     , iqc: pp.iqc
+                     , rteq: pp.rteq
+                     }
+                   else
+                     initValue
   where
-      initCsv = case init pp.csv of
-           Just x -> x
-           Nothing -> []
-      lastRow = case last pp.csv of
-              Just x -> x
-              Nothing -> []
-      row = case init lastRow of
-              Just x -> x
-              Nothing -> []
-      str = case last lastRow of
-              Just x -> x
-              Nothing -> ""
-
-baz2 :: ParseParam -> String -> ParseParam
-baz2 pp char = { csv: csv
-               , aq: pp.aq
-               , iqc: iqc
-               , rteq: pp.rteq
-               }
-    where
-          initCsv = case init pp.csv of
-               Just x -> x
-               Nothing -> []
-          lastRow = case last pp.csv of
-                  Just x -> x
-                  Nothing -> []
-          row = case init lastRow of
-                  Just x -> x
-                  Nothing -> []
-          str = case last lastRow of
-                  Just x -> x
-                  Nothing -> ""
-          csv = if char == "," then
-                  addCell initCsv (row <> []) str
-                else if char == "\n" then
-                  addRow (addCell initCsv row str) row
-                else if char == "\"" then
-                  pp.csv
-                else
-                  addChar initCsv row "" (str <> char)
-          iqc = if char == "\"" then
-                  true
-                else 
-                  pp.iqc
-
+      initCsv = getInitCsv pp.csv
+      lastRow = getLastRow pp.csv
+      row = getRow lastRow
+      str = getStr lastRow
+      csv = if char == "," then
+              addCell initCsv (row <> []) str
+            else if char == "\n" then
+              addRow (addCell initCsv row str) row
+            else if char == "\"" then
+              pp.csv
+            else
+              addChar initCsv row "" (str <> char)
+      resCsv = if char == "\"" then
+                 addChar initCsv lastRow str char
+               else
+                 if char == "," then -- "," is delimiter char
+                     addCell initCsv (lastRow <> []) ""
+                 else if char == "\n" then
+                     addRow pp.csv []
+                 else
+                     pp.csv
 
