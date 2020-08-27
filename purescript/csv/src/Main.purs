@@ -22,7 +22,6 @@ import Node.Stream (Readable, Writable)
 
 import Parser (parse)
 
-
 foreign import getColumns :: Int
 foreign import getRows :: Int
 
@@ -35,13 +34,13 @@ foreign import onResizeImpl :: Fn1 (Int -> Int -> Effect Unit) (Effect Unit)
 onResize :: (Int -> Int -> Effect Unit) -> Effect Unit
 onResize = runFn1 onResizeImpl
 
--- FIXME 11kのファイル開くとエラーになるんだが...
--- RangeError: Maximum call stack size exceeded
+-- FIXME 1Mのファイル開くのが遅い
+-- FIXME クオートで囲まれてないと変になる
 
 main :: Effect Unit
 main = do
   let screenCol = getColumns
-  let screenRow = getRows -- /2
+  let screenRow = getRows
 
   onResize showSize
   args <- argv
@@ -50,29 +49,22 @@ main = do
                    3 -> getFileName args
                    _ -> Nothing
 
-
   let fn = case fileName of
              Just hoge -> hoge
              _ -> ""
+
   txt <- readTextFile UTF8 fn
-  let txtRecord = createTextRecord txt
   srs <- R.new 0
 
-  csv <- parse txt "asdf"
+  csv <- parse txt ","
 
-  let csv__ = filter (\x -> length x > 0) csv -- TODO filter???
-  let csv_ = { csv : getCsv csv__
-             , columnWidth : getCsvWidth csv__ -- TODO multiByte
-             }
-  let csvTable = tablize csv_
-  let txtRecordhoge = createTextRecord csvTable
+  let csv_ = filter (\x -> length x > 0) csv -- TODO filter???
+  let csvTable = tablize { csv : getCsv csv_ , columnWidth : getCsvWidth csv_ }
+  let txtRecord = createTextRecord csvTable
 
   clear
-  -- let dtxt =  txtRecordhoge
-  let dtxt = filter (\x -> 0 < x.row && x.row < (0 + screenRow)) txtRecordhoge
-  showTxtRecord dtxt
-  onKeypress stdin stdout true (displayTxt screenRow txtRecordhoge srs)
-
+  showTxtRecord $ filter (\x -> 0 < x.row && x.row < (0 + screenRow)) txtRecord
+  onKeypress stdin stdout true (displayTxt screenRow txtRecord srs)
 
 tablize :: CSV -> String
 tablize csv_ = 
@@ -84,7 +76,6 @@ tablize csv_ =
                         Nothing -> ""
 
 
--- NEXT TODO : write table outlines
 csvFold :: String -> Row -> CSV -> String
 csvFold vv row_ csv_ = vv <> "\n" <> makeRow (foldl (\y -> \tupleCell -> {fst: y.fst <> (makeOutLine (snd (tupleCell) + 2)), snd: y.snd <> ((getPt (fst tupleCell) (snd (tupleCell) + 2)))}) {fst: "", snd: ""} (zipRow row_.row csv_.columnWidth)) <> "|"
 

@@ -16,6 +16,11 @@ type Delimiter = String
 type AfterQuote = Boolean
 type InsideQuoteCell = Boolean
 type ReadyToEndQuote = Boolean
+type ParseParam = { csv :: Array (Array String)
+                  , aq :: AfterQuote
+                  , iqc :: InsideQuoteCell
+                  , rteq :: ReadyToEndQuote 
+                  }
 
 regexFlag :: RegexFlags
 regexFlag = RegexFlags
@@ -31,13 +36,12 @@ convertToCrlf s = case regex "\r\n|\r|\n" regexFlag of
                     Left r -> "error"
                     Right r -> replace r "\n" s
 
-type ParseParam = { csv :: Array (Array String) , aq :: Boolean,  iqc :: Boolean, rteq :: Boolean }
 initValue :: ParseParam
 initValue = { csv: []
-             , aq: false
-             , iqc: false
-             , rteq: false 
-             }
+            , aq: false
+            , iqc: false
+            , rteq: false 
+            }
 
 parse :: String -> Delimiter -> Effect (Array (Array String))
 parse s d = do
@@ -55,8 +59,8 @@ addRow csv row = csv <> [row]
 
 getInitCsv :: Array (Array String) -> Array (Array String)
 getInitCsv csv = case init csv of
-                Just x -> x
-                Nothing -> []
+                   Just x -> x
+                   Nothing -> []
 
 getLastRow :: Array (Array String) -> Array String
 getLastRow csv = case last csv of
