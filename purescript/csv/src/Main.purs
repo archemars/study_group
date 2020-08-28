@@ -2,26 +2,25 @@ module Main where
 
 import Prelude
 
-import Effect (Effect)
-import Effect.Console (log, clear)
-import Node.Stream (Readable, Writable)
-import Node.Process (stdin, stdout, argv)
+import Data.Array (replicate, length, head, reverse, filter, snoc, zip)
+import Data.Foldable (foldl)
 import Data.Function.Uncurried (Fn1, runFn1, Fn4, runFn4)
 import Data.Generic.Rep (class Generic)
-import Data.Array (replicate, length, head, reverse, filter, snoc, zip)
-import Data.String (length, joinWith) as S
-import Data.Traversable (for)
-import Node.FS.Sync(readTextFile)
 import Data.Maybe (Maybe(Just, Nothing))
-import Node.Encoding(Encoding(UTF8), byteLength)
+import Data.String (length, joinWith) as S
 import Data.String.Common (split)
 import Data.String.Pattern (Pattern(..))
-import Data.Foldable (foldl)
+import Data.Traversable (for)
 import Data.Tuple (Tuple, fst, snd)
+import Effect (Effect)
+import Effect.Console (log, clear)
 import Effect.Ref as R
+import Node.Encoding(Encoding(UTF8), byteLength)
+import Node.FS.Sync(readTextFile)
+import Node.Process (stdin, stdout, argv, exit)
+import Node.Stream (Readable, Writable)
 
 import Parser (parse)
-
 
 foreign import getColumns :: Int
 foreign import getRows :: Int
@@ -35,11 +34,13 @@ foreign import onResizeImpl :: Fn1 (Int -> Int -> Effect Unit) (Effect Unit)
 onResize :: (Int -> Int -> Effect Unit) -> Effect Unit
 onResize = runFn1 onResizeImpl
 
+-- FIXME 1Mのファイル開くのが遅い
+-- FIXME クオートで囲まれてないと変になる
 
 main :: Effect Unit
 main = do
   let screenCol = getColumns
-  let screenRow = getRows -- /2
+  let screenRow = getRows
 
   onResize showSize
   args <- argv
@@ -48,28 +49,22 @@ main = do
                    3 -> getFileName args
                    _ -> Nothing
 
-
   let fn = case fileName of
              Just hoge -> hoge
              _ -> ""
+
   txt <- readTextFile UTF8 fn
-  let txtRecord = createTextRecord txt
   srs <- R.new 0
 
-  csv <- parse txt "asdf"
+  csv <- parse txt ","
 
-  let csv__ = filter (\x -> length x > 0) csv -- TODO filter???
-  let csv_ = { csv : getCsv csv__
-             , columnWidth : getCsvWidth csv__ -- TODO multiByte
-             }
-  let csvTable = tablize csv_
-  let txtRecordhoge = createTextRecord csvTable
+  let csv_ = filter (\x -> length x > 0) csv -- TODO filter???
+  let csvTable = tablize { csv : getCsv csv_ , columnWidth : getCsvWidth csv_ }
+  let txtRecord = createTextRecord csvTable
 
   clear
-  let dtxt =  txtRecordhoge
-  showTxtRecord dtxt
-  onKeypress stdin stdout true (displayTxt screenRow txtRecordhoge srs)
-
+  showTxtRecord $ filter (\x -> 0 < x.row && x.row < (0 + screenRow)) txtRecord
+  onKeypress stdin stdout true (displayTxt screenRow txtRecord srs)
 
 tablize :: CSV -> String
 tablize csv_ = 
@@ -81,7 +76,6 @@ tablize csv_ =
                         Nothing -> ""
 
 
--- NEXT TODO : write table outlines
 csvFold :: String -> Row -> CSV -> String
 csvFold vv row_ csv_ = vv <> "\n" <> makeRow (foldl (\y -> \tupleCell -> {fst: y.fst <> (makeOutLine (snd (tupleCell) + 2)), snd: y.snd <> ((getPt (fst tupleCell) (snd (tupleCell) + 2)))}) {fst: "", snd: ""} (zipRow row_.row csv_.columnWidth)) <> "|"
 
@@ -133,6 +127,7 @@ sepalater = Pattern ","
 
 showTxtRecord :: Array TxtRecord -> Effect Unit
 showTxtRecord t = do
+  clear
   let firstRow = case head t of
               Just h -> h.char
               Nothing -> ""
@@ -140,9 +135,9 @@ showTxtRecord t = do
   a <- for t \x -> do
      let columns = split sepalater x.char
      let rowLength = S.length x.char + length columns
-     log $ (foldl (\xx -> \y -> if xx == "" then y else xx <> y) "" columns)
+     pure $ foldl (\xx -> \y -> if xx == "" then y else xx <> y) "" columns
 
-  log ""
+  log $ S.joinWith "\n"  a
 
 type TxtRecord = {row:: Int, char:: String}
 initTxtRecord :: Array TxtRecord
@@ -156,30 +151,37 @@ getFileName args = head $ reverse args
 
 displayTxt :: Int -> Array TxtRecord -> (R.Ref Int) -> PressedKeyInfo -> Effect Unit
 displayTxt screenRow txtReords srs (PressedKeyInfo pki) = do
-  clear
-  let name = case pki.name of
-       "h" -> "left"
-       "j" -> "down"
-       "k" -> "up"
-       "l" -> "right"
-       "f" -> "forward"
-       "b" -> "back"
-       _   -> pki.name
+  let name = if pki.shift then
+               case pki.name of
+                "g" -> "end"
+                _   -> pki.name
+             else
+               case pki.name of
+                "h" -> "left"
+                "j" -> "down"
+                "k" -> "up"
+                "l" -> "right"
+                "f" -> "forward"
+                "b" -> "back"
+                "g" -> "top"
+                "G" -> "end"
+                "q" -> "exit"
+                _   -> pki.name
   case name of
        "up" -> R.modify_ (\s -> if s < 1 then s else s - 1) srs
        "down" -> R.modify_ (\s -> if (s + screenRow) > (length txtReords) then s else s + 1) srs
        "back" -> R.modify_ (\s -> if s - screenRow < 1 then 0 else if s < 1 then s else s - screenRow) srs
-       "forward" -> R.modify_ (\s -> if (s + screenRow) > (length txtReords) then s else s + screenRow) srs -- todo over
+       "forward" -> R.modify_ (\s -> if (s + screenRow) > (length txtReords) - screenRow + 1 then (length txtReords) - screenRow + 1 else s + screenRow) srs
+       "top" -> R.modify_ (\s -> 0) srs
+       "end" -> R.modify_ (\s -> (length txtReords) - screenRow + 1) srs
        _   -> R.modify_ (\s -> s) srs
   newStartRow  <- R.read srs
   let dtxt = filter (\x -> newStartRow < x.row && x.row < (newStartRow + screenRow)) txtReords
 
-  showTxtRecord dtxt
-
-
--- next
--- g top
--- G end
+  if name == "exit" then
+    exit 0
+  else
+    showTxtRecord dtxt
 
 showSize :: Int -> Int -> Effect Unit
 showSize col row = do
